@@ -523,3 +523,71 @@ This step affects configuration only: no frontend, backend, API or database tabl
 - **Pre-commit checks (agent, before committing):** `git status` showed only `.env.example`, `.gitignore` and `PROMPT_LOG.md` staged; `.env` ignored and unstaged; `.env.example` contained placeholders only; the log documented both corrections; a scan of the staged diff found no part of the real credentials (password, user name or host).
 - **Commit reference:** `b0862be43aa8b9e5fac4769005653ab0268033ea` (short `b0862be`), 3 files changed; pushed to `origin/main`. `git ls-remote origin main` returned the same hash, and `git status` was clean after the push.
 - **Follow-up prompt:** the user's "Commit Neon Configuration" prompt approving this commit and message (it also asked for this reference to be recorded here and for Step 2.2 not to begin yet).
+- **Second commit:** `ead3d3f` `Record Neon configuration commit in prompt log` (log-only; pushed). Approved by the user's prompt `Yes, commit the log update`.
+
+---
+
+## Milestone 2, Step 2.2 — Install Prisma 7.10.0
+
+- **Date:** 2026-10-15
+- **Objective:** Install Prisma 7.10.0 and its supporting packages, pinned to exact versions. No schema, `prisma.config.ts`, database connection, tables, migrations or application code.
+
+### Exact prompts
+1. ```
+   Yes, begin Step 2.2
+   ```
+   → Approval of the agent's Step 2.2 description (previous message): install `prisma`, `@prisma/client`, `@prisma/adapter-pg`, `pg`, `dotenv`, all pinned; change only `package.json` and `package-lock.json`; report any `npm audit` changes without applying forced fixes.
+
+### Commands executed
+- `npm view <package> version engines.node` for each package (read-only version check)
+- `npm audit` (baseline before installing)
+- `npm install --save-exact @prisma/client@7.10.0 @prisma/adapter-pg@7.10.0 pg@8.23.1 dotenv@18.0.8`
+- `npm install --save-dev --save-exact prisma@7.10.0`
+- `npx prisma --version`, `npm audit --json` (summarized by package), `npm run lint`, `npm run build`
+- `diff` of `package.json` before and after, `git status --short`
+- The value-hiding `.env` checker (same as Step 2.1)
+
+### Files modified (no files created)
+- `package.json`, `package-lock.json`.
+This step affects project tooling only: no frontend, backend, API or database changes.
+
+### What the packages do
+- `prisma` (dev): the command-line tool for validating the schema, creating migrations and generating the client.
+- `@prisma/client`: the library the app will use to run queries.
+- `@prisma/adapter-pg` and `pg`: Prisma 7 requires a driver adapter; these connect it to PostgreSQL (Neon).
+- `dotenv`: lets the Prisma command-line tool read `.env`.
+
+### Verification results
+- Versions pinned exactly: `@prisma/adapter-pg` 7.10.0, `@prisma/client` 7.10.0, `dotenv` 18.0.8, `pg` 8.23.1 (dependencies); `prisma` 7.10.0 (devDependencies). `package.json` diff shows only those five additions.
+- `npx prisma --version` reports `prisma 7.10.0` and `@prisma/client 7.10.0` on Node v24.21.0, with the schema engine present.
+- `npm run lint` passes; `npm run build` compiles successfully.
+- `git status` shows only `package.json` and `package-lock.json` modified. No `prisma/` folder or `prisma.config.ts` exists yet. `.env` unchanged (checker: both variables still set).
+- **User test:** ✅ The user ran `npx prisma --version` and reported that Prisma is the correct version (7.10.0). The exact output was not pasted into the log.
+
+### Problems encountered
+- **`npm audit` went from 5 to 9 high-severity findings.** The original 5 are the dev-lint chain (`braces` → … → `eslint-config-next`) noted in Step 1. The 4 new ones come from the Prisma command-line tool's own dependencies: `prisma` and `@prisma/config` (via `deepmerge-ts`: stack exhaustion when merging recursive objects) and `mysql2` (an auth-plugin issue in a MySQL driver; this project uses PostgreSQL). None of this code is imported by the app: the app uses only `@prisma/client` and the adapter. npm's `--omit=dev` audit still reports the 4 Prisma findings, because `@prisma/client` lists `prisma` as a peer dependency, so npm installs it alongside; that is an installation detail, not code the app runs. The 5 older findings are `eslint-config-next` lint tooling only. `npm audit` flags packages that exist in the tree, not code that is reachable. The agent recommended accepting these for the local-only Week 5 demo, not running `npm audit fix --force` (it would downgrade `eslint-config-next` to v14, a breaking change), and revisiting before any public deployment. Expect GitHub Dependabot alerts for the same packages. No forced fix was applied.
+- **npm 11 warning:** install scripts for `prisma` (preinstall) and `@prisma/engines` (postinstall) were not allowed (`allowScripts`). `npx prisma --version` still works, so nothing was changed. If a later command fails because of this, that is the first thing to revisit.
+
+### Follow-up prompts
+2. ```
+   Pause for a moment. Why is the audit showing so many things? Where are we going wrong?
+   ```
+   → The agent traced each finding with `npm audit --omit=dev --json`, `npm ls mysql2` and `npm ls braces`, and explained that nothing was done wrong (see Problems encountered).
+3. ```
+   Fix the log wording and continue
+   ```
+   → The agent corrected the log wording above.
+4. ```
+   Test: prisma is in the correct version. Commit and push
+   ```
+   → The agent recorded the user's test result, ran the pre-commit checks and committed.
+
+### Errors or mistakes identified
+- The agent first told the user the new findings were "in dev tooling, not in runtime app code" without checking npm's own runtime classification. When the user asked why the audit showed so much, `npm audit --omit=dev` showed 4 findings, which are the Prisma ones (via the `@prisma/client` → `prisma` peer dependency).
+
+### Corrections made
+- Rewrote the audit explanation in "Problems encountered" to say this precisely.
+
+### Git
+- **Commit message:** PENDING — nothing committed; awaiting the user's approval.
+- **Commit reference:** PENDING.
