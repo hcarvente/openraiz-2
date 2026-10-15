@@ -519,5 +519,7 @@ This step affects configuration only: no frontend, backend, API or database tabl
 - Corrected the branch-name statement to "production" (the default).
 
 ### Git
-- **Commit message:** PENDING — nothing committed; awaiting the user's approval.
-- **Commit reference:** PENDING.
+- **Commit message:** `Configure Neon database environment and document setup` (no Co-Authored-By trailer)
+- **Pre-commit checks (agent, before committing):** `git status` showed only `.env.example`, `.gitignore` and `PROMPT_LOG.md` staged; `.env` ignored and unstaged; `.env.example` contained placeholders only; the log documented both corrections; a scan of the staged diff found no part of the real credentials (password, user name or host).
+- **Commit reference:** `b0862be43aa8b9e5fac4769005653ab0268033ea` (short `b0862be`), 3 files changed; pushed to `origin/main`. `git ls-remote origin main` returned the same hash, and `git status` was clean after the push.
+- **Follow-up prompt:** the user's "Commit Neon Configuration" prompt approving this commit and message (it also asked for this reference to be recorded here and for Step 2.2 not to begin yet).
