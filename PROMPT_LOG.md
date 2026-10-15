@@ -681,5 +681,8 @@ None in this step.
 None.
 
 ### Git
-- **Commit message:** PENDING — nothing committed; awaiting the user's approval.
-- **Commit reference:** PENDING.
+- **Commit message:** `Configure Prisma 7 schema and CLI config` (no Co-Authored-By trailer)
+- **Pre-commit checks (agent):** staged files were only `.gitignore`, `PROMPT_LOG.md`, `prisma.config.ts` and `prisma/schema.prisma`; no `.env` or generated files staged; a scan of the staged diff found no part of the real credentials.
+- **Commit reference:** `c198f8e2ed18ba8841a7f3cb896aa4ed7290aa7e` (short `c198f8e`), 4 files changed; pushed to `origin/main`. `git ls-remote origin main` returned the same hash, and `git status` was clean after the push.
+- **Follow-up prompt:** `Yes, update the log and commit it`.
+- **Second commit:** `Record Prisma configuration commit in prompt log` (log-only; its hash is visible in `git log`).
