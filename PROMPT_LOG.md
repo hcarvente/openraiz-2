@@ -336,3 +336,62 @@ None.
 - **Push to `origin/main`:** done. `git ls-remote origin main` returned the same hash and the remote tree lists 19 files. Seeing the files on github.com: ⬜ PENDING user confirmation.
 - **Follow-up prompts:** `Leave out the trailer and yes committhe 19 files and push to origin.` (also asked why localhost stopped rendering: the agent had stopped the dev server with `pkill` after its pre-commit check; restart with `npm run dev`), then `Update the log and commit it.`
 - **Second commit:** `Record first commit in prompt log` (this log update; its hash is visible in `git log`).
+
+---
+
+## Milestone 1, Step 3 — Preserve original branding (logo-only header)
+
+- **Date:** 2026-10-15
+- **Objective:** Bring the original OpenRaiz visual identity (sprout logo, color palette, `system-ui` fonts, favicon) into the new app with a simple logo-only header. No nav links, About photo, footer, or opportunity cards.
+
+### Exact prompts
+1. ```
+   Move on to that
+   ```
+   → "That" referred to the agent's proposed next step (copy branding assets, set colors). The agent first read the original repo (read-only) and proposed a plan, and asked two questions: the "OpenRaíz" vs "OpenRaiz" spelling, and whether to include nav pills.
+2. ```
+   Use OpenRaiz, logo-only header, go ahead
+   ```
+3. ```
+   1'/Users/hernancarvente/Desktop/Screenshot 2026-10-15 at 2.47.20 PM (3).png'Here is a screenshot
+   ```
+   → User shared a screenshot of http://localhost:3000 in their browser.
+
+### Commands executed
+- Read-only inspection of the original repo: `grep` of `index.html`, `ls assets`, reading `css/styles.css`, `assets/favicon.svg`.
+- `cp` of `favicon.svg`, `favicon-32.png`, `favicon-180.png`, `og-image.png` from the original `assets/` into `public/` (copy only; original untouched).
+- `rm app/page.module.css app/favicon.ico`
+- `npm run lint`, `npm run build`, `npm run dev`, `curl` of `/`, `/favicon.svg`, `/favicon-32.png`, `/favicon-180.png`
+- `git status` in the original repo (read-only check).
+
+### Files created or modified (frontend only — no API, Prisma, or database)
+- **Created:** `public/favicon.svg`, `public/favicon-32.png`, `public/favicon-180.png`, `public/og-image.png` (copied), `components/SiteHeader.js`.
+- **Modified:** `app/globals.css` (OpenRaiz color variables, fonts, header/logo styles), `app/layout.js` (removed Geist fonts; title "OpenRaiz"; favicon links), `app/page.js` (header plus placeholder "Opportunities" heading).
+- **Deleted:** `app/favicon.ico` (default Next.js icon, would override ours), `app/page.module.css` (unused starter CSS).
+- Not changed: the 5 unused starter SVGs in `public/` (`file.svg`, `globe.svg`, `next.svg`, `vercel.svg`, `window.svg`), `AGENTS.md`.
+
+### What the code does
+- `app/layout.js` wraps every page and sets the tab title and icons.
+- `components/SiteHeader.js` is a React component rendering the original sprout SVG (uses `currentColor`, colored green by CSS) plus the wordmark "OpenRaiz", linking to `/` via `next/link`.
+- `app/page.js` renders the header and a placeholder "Opportunities" heading.
+- `app/globals.css` defines the brand colors as CSS variables (`--color-bg`, `--color-primary`, etc.) for reuse by later components.
+- Note: the original CSS labels these colors "PLACEHOLDER brand variables", so they may change later.
+
+### How the user tested
+Opened http://localhost:3000 in Chrome and shared a screenshot.
+
+### Results of testing
+- **Agent (terminal):** `npm run lint` passes (after the fix below), `npm run build` compiles, the dev-server HTML contains the title "OpenRaiz", the favicon links, the wordmark and the heading, and the three favicon URLs return HTTP 200. Original repo: 0 changed files, still at commit `0113d35`.
+- **User (screenshot):** The screenshot shows the cream background, the centered green sprout logo with "OpenRaiz", a green "Opportunities" heading with grey placeholder text, and a browser tab titled "OpenRaiz" with the green sprout icon. The user did not separately state pass/fail beyond sharing the screenshot.
+
+### Errors or mistakes identified
+- The agent's first `SiteHeader.js` used a plain `<a href="/">`; `npm run lint` flagged `@next/next/no-html-link-for-pages` (Next.js wants `<Link>` for internal links).
+- The editor then briefly showed "Expected corresponding JSX closing tag for 'Link'". That was stale: it appeared between the agent's two edits (opening tag changed first, closing tag second). The final file has matching tags and lint and build pass.
+- The screenshot filename contains a special space character before "PM", so the first attempt to open it failed; the agent located and copied it using a wildcard.
+
+### Corrections made
+- Replaced `<a>` with `<Link>` (import from `next/link`) in `components/SiteHeader.js`.
+
+### Git
+- **Commit message:** PENDING — not yet committed; awaiting the user's approval.
+- **Commit reference:** PENDING.

@@ -1,49 +1,67 @@
+/* OpenRaiz brand variables, carried over from the original OpenRaiz site (css/styles.css) */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-bg: #FAF7F2;      /* page background */
+  --color-text: #2B2B2B;    /* default text */
+  --color-primary: #2E6F4E; /* logo, headings, links */
+  --color-accent: #E4622B;  /* reserved for future CTAs/highlights */
+  --color-muted: #6B6459;   /* secondary/supporting text */
+  --color-nav-bg: #F1ECE1;  /* pill background behind the nav links */
+  --font-heading: system-ui, sans-serif;
+  --font-body: system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-html {
-  height: 100%;
-}
-
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
-}
-
-body {
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
+/* Padding/border don't add to declared widths anywhere */
 * {
   box-sizing: border-box;
-  padding: 0;
-  margin: 0;
 }
 
-a {
-  color: inherit;
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  line-height: 1.5;
+}
+
+/* Header bar: logo lockup centered in a column */
+.site-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem 1.25rem 1rem;
+  border-bottom: 1px solid #E5DED2;
+  background: linear-gradient(180deg, #FDFBF7 0%, var(--color-bg) 100%);
+}
+
+/* Logo lockup: sprout mark + wordmark, side by side */
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.5rem;
+  color: var(--color-primary);
   text-decoration: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
+.logo-mark {
+  color: var(--color-primary); /* svg uses stroke="currentColor" */
+  flex-shrink: 0;
+}
+
+/* Placeholder content area under the header */
+.page-main {
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 2rem 1.25rem;
+}
+
+.page-main h1 {
+  font-family: var(--font-heading);
+  color: var(--color-primary);
+}
+
+.page-main p {
+  color: var(--color-muted);
 }
