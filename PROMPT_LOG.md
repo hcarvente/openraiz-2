@@ -589,5 +589,8 @@ This step affects project tooling only: no frontend, backend, API or database ch
 - Rewrote the audit explanation in "Problems encountered" to say this precisely.
 
 ### Git
-- **Commit message:** PENDING — nothing committed; awaiting the user's approval.
-- **Commit reference:** PENDING.
+- **Commit message:** `Install Prisma 7.10.0 and PostgreSQL adapter` (no Co-Authored-By trailer)
+- **Pre-commit checks (agent):** staged files were only `package.json`, `package-lock.json` and `PROMPT_LOG.md`; `.env` ignored and unstaged; the `package.json` diff showed exactly the five pinned packages; a scan of the staged diff found no part of the real credentials.
+- **Commit reference:** `9507f8a837987fce147c5b5f50a07d73a4331e75` (short `9507f8a`), 3 files changed; pushed to `origin/main`. `git ls-remote origin main` returned the same hash, and `git status` was clean after the push.
+- **Follow-up prompts:** `Test: prisma is in the correct version. Commit and push` (logged above), then `Yes, update the log and commit it`.
+- **Second commit:** `Record Prisma install commit in prompt log` (log-only; its hash is visible in `git log`).
