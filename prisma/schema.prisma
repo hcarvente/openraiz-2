@@ -1,0 +1,13 @@
+// Prisma schema for OpenRaiz 2.0.
+// No models yet: the Opportunity model is added in a later step.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  // The connection URL is NOT set here. In Prisma 7 it lives in prisma.config.ts
+  // (and the app passes its own URL to the client through the pg adapter).
+}

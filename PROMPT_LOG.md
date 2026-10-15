@@ -594,3 +594,92 @@ This step affects project tooling only: no frontend, backend, API or database ch
 - **Commit reference:** `9507f8a837987fce147c5b5f50a07d73a4331e75` (short `9507f8a`), 3 files changed; pushed to `origin/main`. `git ls-remote origin main` returned the same hash, and `git status` was clean after the push.
 - **Follow-up prompts:** `Test: prisma is in the correct version. Commit and push` (logged above), then `Yes, update the log and commit it`.
 - **Second commit:** `Record Prisma install commit in prompt log` (log-only; its hash is visible in `git log`).
+
+---
+
+## Milestone 2, Step 2.3 — Configure Prisma without models
+
+- **Date:** 2026-10-15
+- **Objective:** Add the Prisma schema file (generator and PostgreSQL datasource only) and the Prisma 7 config file that points the command-line tool at `DIRECT_URL`, with an explicit output folder for the generated client, which Git ignores. No models, migrations, tables, Neon connection test, frontend or API changes.
+
+### Exact prompts
+1. ```
+   Configure Prisma Without Models
+   Copy and paste:
+   I approve Milestone 2, Step 2.3: Configuring Prisma without creating database models.
+   Please proceed with the configuration you proposed.
+   Scope of work:
+   1. Create prisma/schema.prisma containing the Prisma client generator and PostgreSQL datasource.
+   2. Create prisma.config.ts following the installed Prisma 7 version's requirements.
+   3. Configure Prisma's CLI to use DIRECT_URL from my existing .env file.
+   4. Configure an explicit output directory for the generated Prisma client.
+   5. Update .gitignore to exclude the generated client directory.
+   Use the existing installed Prisma version. Do not upgrade packages or introduce new dependencies.
+   Verification requirements:
+   1. Run npx prisma validate.
+   2. Confirm the configuration validates successfully.
+   3. Verify that no database credentials appear in the source files.
+   4. Confirm that .env remains excluded from Git.
+   5. Explain in plain English what schema.prisma and prisma.config.ts each do.
+   6. Identify the files created or modified.
+   Important constraints:
+   - Do not create the Opportunity model yet.
+   - Do not run database migrations.
+   - Do not create database tables.
+   - Do not test the Neon connection yet.
+   - Do not modify frontend components or API routes.
+   - Do not modify the original OpenRaiz repository.
+   Prompt log:
+   Update PROMPT_LOG.md with the exact prompt, changes made, commands executed, verification results, and any mistakes or corrections.
+   Do not include credentials or sensitive configuration values in the log.
+   Git:
+   Once verification passes, provide a summary of the changes and propose a Git commit message.
+   Do not commit or push until I approve.
+   Stop after Step 2.3 and wait for my next instruction.
+   ```
+   (Before this prompt, the user had been asked "Do you approve Step 2.3?" after the agent described it.)
+2. ```
+   Yes, commit and push it
+   ```
+   → Approval of the agent's summary and proposed commit message `Configure Prisma 7 schema and CLI config`. The user did not separately report running any test in this step.
+
+### Commands executed
+- `WebFetch` of the Prisma 7 PostgreSQL quickstart (read-only documentation lookup)
+- Inspection of the installed package: `ls node_modules/@prisma/config/dist`, `grep` of its type definitions for the `env` helper
+- `npx prisma validate`
+- `git check-ignore -v generated/prisma/client.ts .env`
+- A credential scan (script that prints only yes/no) over `prisma/schema.prisma`, `prisma.config.ts`, `.gitignore` and `PROMPT_LOG.md`
+- `DIRECT_URL= npx prisma validate` (extra negative test with the variable blanked for one run)
+- `npm run lint`, `npm run build`, `git status --short`
+
+### Files created or modified
+- **Created:** `prisma/schema.prisma`, `prisma.config.ts`.
+- **Modified:** `.gitignore` (added `/generated/prisma`), `PROMPT_LOG.md` (this entry).
+- No packages were added or upgraded. The original OpenRaiz repo was not touched.
+This step affects database tooling configuration only: no frontend, backend, API or database changes.
+
+### What the code does
+- **`prisma/schema.prisma`:** the Prisma "blueprint" file. For now it only says which generator to use (`prisma-client`) and where to write the generated client (`generated/prisma`, outside `node_modules`), and that the database is PostgreSQL. It contains no models and no connection URL. The Opportunity model will go here later.
+- **`prisma.config.ts`:** settings for the Prisma command-line tool (validate, migrate, generate). It loads `.env`, says where the schema and migrations folders are, and gives the tool the direct connection string from `DIRECT_URL`. It uses Prisma's `env()` helper, which raises a clear error if the variable is missing instead of silently using nothing. The running app does not read this file; the app will pass `DATABASE_URL` (pooled) to the client itself in a later step.
+- **`.gitignore`:** ignores `/generated/prisma`, because the generated client is rebuilt by `npx prisma generate` and should not be committed.
+
+### Verification results
+- `npx prisma validate` printed "Loaded Prisma config from prisma.config.ts." and "The schema at prisma/schema.prisma is valid". `validate` loads the config and checks the schema; it did not connect to Neon, no tables or migrations exist, and no connection test was run.
+- Negative test: with `DIRECT_URL` blanked, validate failed with `PrismaConfigEnvError: Cannot resolve environment variable: DIRECT_URL`, confirming the config really reads that variable.
+- Credential scan: no part of the real password, user name or host appears in `prisma/schema.prisma`, `prisma.config.ts`, `.gitignore` or `PROMPT_LOG.md`.
+- `.env` is still ignored (`.gitignore:34 .env*`); `generated/prisma/` is ignored (`.gitignore:39`). `git status` shows only `.gitignore` modified and `prisma.config.ts` and `prisma/` new.
+- `npm run lint` passes and `npm run build` compiles, so the new TypeScript config file did not disturb the JavaScript app.
+- **Not yet confirmed by the user:** the user has not yet reviewed these files or the results.
+
+### Open question for a later step (Step 2.4)
+The `prisma-client` generator writes TypeScript files, and this is a JavaScript project. The app's `lib/prisma.js` will import that generated client, and it is not yet tested that Next.js handles that. This will be checked when the client is generated and the connection is verified, and the fix (if one is needed) will be shown then.
+
+### Errors or mistakes identified
+None in this step.
+
+### Corrections made
+None.
+
+### Git
+- **Commit message:** PENDING — nothing committed; awaiting the user's approval.
+- **Commit reference:** PENDING.

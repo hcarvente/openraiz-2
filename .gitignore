@@ -35,6 +35,9 @@ yarn-error.log*
 # ...except the placeholder template, which is safe to commit (no real values)
 !.env.example
 
+# generated Prisma client (recreated by `npx prisma generate`)
+/generated/prisma
+
 # vercel
 .vercel
 
