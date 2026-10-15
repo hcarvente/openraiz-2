@@ -332,5 +332,7 @@ None.
 
 ### Git
 - **Commit message:** `Initialize OpenRaiz 2.0 Next.js application`
-- **Commit reference:** PENDING — not yet committed; awaiting the user's final approval.
-- **Push to `origin/main`:** PENDING.
+- **Commit reference:** `be7a8f60c943954d1f1e33deb89b44a277e0df96` (short `be7a8f6`), 19 files, committed without a Co-Authored-By trailer at the user's request.
+- **Push to `origin/main`:** done. `git ls-remote origin main` returned the same hash and the remote tree lists 19 files. Seeing the files on github.com: ⬜ PENDING user confirmation.
+- **Follow-up prompts:** `Leave out the trailer and yes committhe 19 files and push to origin.` (also asked why localhost stopped rendering: the agent had stopped the dev server with `pkill` after its pre-commit check; restart with `npm run dev`), then `Update the log and commit it.`
+- **Second commit:** `Record first commit in prompt log` (this log update; its hash is visible in `git log`).
