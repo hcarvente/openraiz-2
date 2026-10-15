@@ -393,5 +393,7 @@ Opened http://localhost:3000 in Chrome and shared a screenshot.
 - Replaced `<a>` with `<Link>` (import from `next/link`) in `components/SiteHeader.js`.
 
 ### Git
-- **Commit message:** PENDING — not yet committed; awaiting the user's approval.
-- **Commit reference:** PENDING.
+- **Commit message:** `Add OpenRaiz branding and logo-only header` (no Co-Authored-By trailer)
+- **Commit reference:** `12d30923417c7f9c60bda591a9a9b9592f7256b6` (short `12d3092`), 11 files changed; pushed to `origin/main`. `git ls-remote origin main` returned the same hash.
+- **Follow-up prompts:** `Yes, commit and push it` (approval of the message above), then `Yes, update the log and commit it`.
+- **Second commit:** `Record branding commit in prompt log` (this log update; its hash is visible in `git log`).
