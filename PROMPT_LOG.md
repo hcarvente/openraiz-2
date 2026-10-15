@@ -397,3 +397,127 @@ Opened http://localhost:3000 in Chrome and shared a screenshot.
 - **Commit reference:** `12d30923417c7f9c60bda591a9a9b9592f7256b6` (short `12d3092`), 11 files changed; pushed to `origin/main`. `git ls-remote origin main` returned the same hash.
 - **Follow-up prompts:** `Yes, commit and push it` (approval of the message above), then `Yes, update the log and commit it`.
 - **Second commit:** `Record branding commit in prompt log` (this log update; its hash is visible in `git log`).
+
+---
+
+## Milestone 2, Step 2.0 — Database plan (planning only)
+
+- **Date:** 2026-10-15
+- **Objective:** Plan Milestone 2 (Neon + Prisma) before touching anything. No files, packages or commands changed the project.
+
+### Exact prompts
+1. ```
+   Yes, write the Milestone 2 plan
+   ```
+   → The agent checked current Prisma/Neon docs (read-only) and wrote the plan in chat.
+
+### Result
+Key findings, which led to the decisions in the next step:
+- `npm install prisma` would install **8.0.0-rc.23**, a release candidate with a different workflow (`contract.prisma`, `db:init`, no `migrate dev`). Prisma 7.10.0 is the latest stable release and is still fully supported.
+- Prisma 7 needs a driver adapter and a `prisma.config.ts`.
+- Neon provides a pooled connection string (`-pooler` in the host) for the app and a direct one for migrations.
+- Planned steps: 2.1 Neon + `.env`, 2.2 install Prisma, 2.3 configure Prisma, 2.4 verify the connection, 2.5 define the Opportunity model, 2.6 migrate, 2.7 optional seed.
+
+### Git
+No commit for this planning step.
+
+---
+
+## Milestone 2, Step 2.1 — Create and configure the Neon database
+
+- **Date:** 2026-10-15
+- **Objective:** Create the Neon project, put the pooled and direct connection strings in a git-ignored `.env`, add a placeholder `.env.example`, and verify the setup is secure. No Prisma, schema, tables, migrations or application code.
+
+### Exact prompts
+1. ```
+   Create the Neon Database
+   Copy and paste the following into Claude:
+   I've reviewed your Milestone 2 database plan and approve the overall approach.
+   Architectural decisions:
+   1. Use Prisma ORM 7.10.0 rather than the Prisma 8 release candidate.
+   2. Use @prisma/adapter-pg with PostgreSQL.
+   3. Use Neon PostgreSQL for database hosting.
+   4. Preserve the original OpenRaiz opportunity fields when we create the database model.
+   5. Use DATABASE_URL for the pooled database connection and DIRECT_URL for the direct connection used by Prisma migrations.
+   Your task is limited to Milestone 2, Step 2.1: Creating and configuring the Neon database.
+   I have not yet confirmed whether I have an existing Neon account.
+   Please guide me through:
+   1. Creating or accessing my Neon account.
+   2. Creating a new Neon project named openraiz-2.
+   3. Selecting an appropriate database region.
+   4. Locating the pooled and direct PostgreSQL connection strings.
+   5. Securely configuring these values in my local .env file.
+   Do not ask me to paste connection strings, passwords, or credentials into chat.
+   Security requirements:
+   - Confirm .env is excluded from Git.
+   - Create an .env.example containing placeholder values only.
+   - Verify the environment variables exist without displaying their contents.
+   - Do not include credentials in PROMPT_LOG.md.
+   - Do not commit or push anything without my approval.
+   Documentation requirements:
+   Update PROMPT_LOG.md with:
+   - Milestone 2, Step 2.1
+   - My exact prompt
+   - Files created or modified
+   - Commands executed
+   - Verification results
+   - Any problems encountered
+   Important:
+   Do not install Prisma, configure the Prisma schema, create database tables, run migrations, or write application code yet.
+   Complete Step 2.1, verify the configuration is secure, and stop.
+   Explain the results in plain English and wait for my approval before proceeding to Step 2.2.
+   ```
+2. ```
+   I was given this link: npx neon skills -y
+   ```
+   → It is an `npx` command, not a link. The agent looked up the `neon` npm package (read-only; Neon's own CLI) and advised **not** running it: unverified, outside this step's scope, `-y` skips confirmation prompts, and the web console already provides the connection strings.
+3. ```
+   It was in the set up screen before showing me the connect option.
+   ```
+   → The agent kept its advice (skip it, not needed) and told the user how to reach the Connect dialog.
+4. ```
+   The connect dialog, currently says "production"
+   ```
+   → "production" is Neon's default branch name; use it as is.
+5. ```
+   Done
+   ```
+   → The user finished putting both strings in `.env`; the agent ran the checks below.
+
+### Work done by the user (in the Neon web console and VS Code)
+Created/opened a Neon account, created the project `openraiz-2`, copied the pooled and direct connection strings, and pasted them into `.env`. The user did not paste any credentials into chat. (The chosen region is not recorded here.)
+
+### Commands executed
+- `git check-ignore -v .env .env.local` and `git check-ignore -v .env.example`
+- `cp .env.example .env` (created `.env` from the placeholder template for the user to edit)
+- A small value-hiding checker script (kept outside the project, in the agent's scratchpad) that reports only whether each variable is set and whether the host looks right; it never prints values
+- `git status --short`, `git ls-files | grep "^\.env"`, `git log --all --oneline -- .env`
+- `npm view neon …` / `npm view neonctl …` (read-only registry lookups for the `npx neon skills` question)
+
+### Files created or modified
+- **Created:** `.env.example` (placeholders only, to be committed).
+- **Created, not committed:** `.env` (real connection strings, ignored by Git).
+- **Modified:** `.gitignore` — added `!.env.example` below `.env*`.
+- **Modified:** `PROMPT_LOG.md` (this entry).
+This step affects configuration only: no frontend, backend, API or database tables.
+
+### Verification results
+- `.env` is excluded from Git: `git check-ignore -v .env` matches `.gitignore:34 .env*`.
+- `.env.example` is not ignored (after the fix below), so it will be committed. `git status` shows `.env.example` and the `.gitignore` change, and does not show `.env`.
+- `.env` was never tracked or committed: `git ls-files` lists no `.env*` file and `git log --all -- .env` returns 0 commits.
+- Checker output (values not displayed): `DATABASE_URL` is set, starts with `postgresql://`, host ends with `neon.tech`, has `-pooler`, has `sslmode=require`. `DIRECT_URL` is set, starts with `postgresql://`, host ends with `neon.tech`, has no `-pooler`, has `sslmode=require`.
+- **Not tested yet:** an actual connection to the database. That is Step 2.4. The checks above verify only the shape of the strings.
+- No credentials appear in this log.
+
+### Errors or mistakes identified
+- The existing `.gitignore` rule `.env*` also matched `.env.example`, so the placeholder file could never have been committed.
+- The agent wrongly said the Neon branch would be called `main`. Neon's default branch is named "production" (the user spotted this in the Connect dialog).
+- The user's Neon setup screen suggested running `npx neon skills -y`. It was not run.
+
+### Corrections made
+- Added `!.env.example` to `.gitignore` so the template is tracked while real `.env` files stay ignored.
+- Corrected the branch-name statement to "production" (the default).
+
+### Git
+- **Commit message:** PENDING — nothing committed; awaiting the user's approval.
+- **Commit reference:** PENDING.
