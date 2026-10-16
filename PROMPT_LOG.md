@@ -1547,4 +1547,133 @@ None. (Filled in the earlier Step 2.6D commit reference `5f03970`.)
 - **Commit message:** `Verify date and lastUpdated behavior in Neon development database` (no Co-Authored-By trailer); documentation-only.
 - **Follow-up prompt:** `Yes, commit and push the documentation update`.
 - **Pre-commit checks (agent):** only `PROMPT_LOG.md` staged; `.env` and `design-reference/` not staged; a scan of the staged diff found no credential, hostname or endpoint parts.
+- **Commit reference:** `4ee3d3464ce04d14dec99827f89638da1b2ddef5` (short `4ee3d34`), 1 file changed (`PROMPT_LOG.md`, 135 lines added); pushed to `origin/main`; `git ls-remote origin main` returned the same hash. Recorded here during Step 3.1.
+
+---
+
+## Milestone 3, Step 3.1 — GET /api/opportunities
+
+- **Date:** 2026-10-16 (UTC; the work started on the evening of 2026-10-15 US Pacific time)
+- **Objective:** Build the first working API endpoint, `GET /api/opportunities`, which reads opportunities from the Neon development database through Prisma and returns them as flat JSON, with generic error handling. No POST, PATCH, DELETE, frontend, import or schema changes.
+- **Previous documentation commit:** `4ee3d34` (`Verify date and lastUpdated behavior in Neon development database`).
+
+### Exact prompts
+1. ```
+   I approve Milestone 3, Step 3.1: Building the GET Opportunities API endpoint.
+   Architectural decisions
+   1. Use a flat JSON response structure matching our Prisma Opportunity model.
+   2. Return all opportunities regardless of status for now, including active, filled, and archived.
+   3. Format calendar-date fields as YYYY-MM-DD using UTC.
+   4. Keep database queries and error handling on the server.
+   5. Do not implement filtering, search, or authentication yet.
+   Objective
+   Create our first working API endpoint:
+   GET /api/opportunities
+   This endpoint should retrieve opportunity records from our Neon development database through Prisma.
+   Step 1 — Create the API route
+   Create:
+   app/api/opportunities/route.js
+   Implement a GET handler that uses our existing shared Prisma Client from lib/prisma.js.
+   Retrieve all opportunities using prisma.opportunity.findMany().
+   Step 2 — Date serialization
+   Create a small helper:
+   lib/serializeOpportunity.js
+   This helper should convert date-only fields such as datePosted, deadline, and lastUpdated into YYYY-MM-DD strings using UTC.
+   Preserve null values for optional dates.
+   Preserve createdAt as a complete timestamp.
+   Keep the API response flat.
+   Do not introduce additional libraries unless necessary.
+   Step 3 — Error handling
+   If the database query fails, return HTTP 500 with a generic error message.
+   Do not include database credentials, connection strings, SQL queries, or internal errors in the API response.
+   Step 4 — Verification
+   1. Start the Next.js development server.
+   2. Test http://localhost:3000/api/opportunities.
+   3. Confirm the endpoint returns HTTP 200.
+   4. Confirm the response is an empty JSON array [], since our database currently contains zero opportunities.
+   5. Confirm the request successfully reached the Neon development database.
+   6. Run lint and build checks.
+   7. Confirm the endpoint performs no database writes.
+   8. Confirm no unexpected files or dependencies were introduced.
+   If the Prisma Client import fails because we're using generated TypeScript code in a JavaScript project, explain the error and propose the smallest correction before making architectural changes.
+   Step 5 — Documentation
+   Update PROMPT_LOG.md with:
+   - Milestone 3, Step 3.1.
+   - This exact prompt.
+   - Files created or modified.
+   - Commands executed.
+   - API verification results.
+   - Any errors or corrections.
+   - The previous documentation commit reference 4ee3d34.
+   Explain in plain English how the request travels from the browser to Next.js, through Prisma, into PostgreSQL, and back.
+   Step 6 — Git
+   After verification:
+   1. Review the changes.
+   2. Show me the files that would be committed.
+   3. Propose a descriptive commit message.
+   4. Wait for my approval before committing or pushing.
+   Important constraints
+   Do not implement POST, PATCH, or DELETE.
+   Do not add frontend components.
+   Do not import the original opportunities.
+   Do not modify the Prisma schema.
+   Do not modify the original OpenRaiz repository.
+   Do not commit or push without my approval.
+   Stop after completing Step 3.1.
+   ```
+   (The user's message before this one was the approval of the documentation commit `4ee3d34`, "Yes, commit and push the documentation update"; the agent's plan and two questions for this step were given in chat, and this prompt contains the user's answers.)
+
+### Before writing code: reading the bundled Next.js docs
+The project's `AGENTS.md` says this Next.js version (16.4.1) has breaking changes and to read `node_modules/next/dist/docs/` first. The build output showed "Cache Components enabled" (set in `next.config.mjs` by `create-next-app`), so the agent read the Route Handler docs. They say that with Cache Components, a `GET` handler follows the same prerendering model as pages, and that prerendering **stops when the handler runs a database query**, so the handler runs at request time on every request. No caching setting or `use cache` was needed.
+
+### Files created (nothing else was modified by the code; this log is modified)
+- `app/api/opportunities/route.js`: the `GET` handler. It calls `prisma.opportunity.findMany()` (via `lib/prisma.js`) with a fixed order (`datePosted` newest first, then `id`), maps each row through the serializer and returns `Response.json(...)`. On any error it logs only the error's name and Prisma code on the server and returns HTTP 500 with `{"error":"Could not load opportunities."}`.
+- `lib/serializeOpportunity.js`: converts `datePosted`, `deadline` and `lastUpdated` to `YYYY-MM-DD` strings using UTC (`toISOString().slice(0, 10)`), keeps `null` as `null`, keeps `createdAt` as a full ISO timestamp, and keeps the response flat (same fields as the database model).
+- **Deviation to note:** the prompt asked for `findMany()` and did not mention ordering. The agent added `orderBy` so the list does not reshuffle in unpredictable order after edits. It is one line and easy to change or remove.
+- `package.json` and `package-lock.json` are unchanged: no new dependencies.
+
+### Commands executed
+- Reading docs: `ls`, `sed`, `grep` over `node_modules/next/dist/docs/` (read-only)
+- `npm run lint`; `npm run build` (twice, once to show the route table and once to filter the result)
+- `npm run dev` (background): requests with `curl` (`-D -` to show status and headers, `-w` for timing, `od -c` for the exact body)
+- A read-only inline Node script using `pg` that read PostgreSQL's table statistics (`pg_stat_user_tables`) for `Opportunity` before the first request and after all requests
+- `DATABASE_URL="postgresql://nobody:notarealpassword@127.0.0.1:1/nodb" npx next start -p 3001` (a production-mode server with a **fake, unreachable** address, to test the error response; this never touched Neon or any real credential)
+- `npx next start -p 3002` (production-mode server with the real development database, to check the built version)
+- An inline serializer test under `TZ=UTC`, `America/Los_Angeles` and `Pacific/Kiritimati` using fictional objects (no database)
+- `pkill` of the servers I started (Next.js 16 allows only one dev server per project folder, so the dev server was stopped before building and restarted afterwards); `git status --short`, `git diff --quiet -- package.json package-lock.json`; in the original repo `git status --short`, `git rev-parse --short HEAD` and the file-timestamp fingerprint
+No migration, no schema change, no database write.
+
+### API verification results (what the agent ran)
+- **HTTP 200 and `[]`:** `GET http://localhost:3000/api/opportunities` returned `HTTP/1.1 200 OK`, `content-type: application/json` and exactly the 2-byte body `[]` (checked with `od -c`). The first request took about 0.7 s (it compiles the route and opens the database connection); later requests took about 0.04 s.
+- **The request reached the Neon development database:** the same code returns 200 with the real `.env` and returns 500 with a fake address (below), so the response depends on the database call. In addition, PostgreSQL's statistics showed the `Opportunity` table had last been read about 15 seconds before the check, which is the `SELECT` that the endpoint issued.
+- **Open question from Steps 2.3 and 2.4 answered:** Next.js's bundler imported the generated TypeScript Prisma client from this JavaScript project with no error, in both dev mode and the production build. No correction or architecture change was needed.
+- **Production build:** `npm run build` compiled successfully and lists `ƒ /api/opportunities` ("server-rendered on demand", not prerendered). A production-mode server (`next start`) with the real development database also returned HTTP 200 and `[]`.
+- **Error handling:** with the fake database address the endpoint returned `HTTP 500` and exactly `{"error":"Could not load opportunities."}`. A search of the response body for nine sensitive strings (the fake password, the fake user, `127.0.0.1`, `postgresql`, the fake database name, `ECONNREFUSED`, `prisma`, `select`, `Opportunity`) found none. The server console logged only `GET /api/opportunities failed: PrismaClientKnownRequestError P1001` (the error name and code).
+- **Serializer (no database):** with fictional rows, in all three time zones: `datePosted` `2026-09-01`, `deadline` stays `null` (and `2026-11-15` when populated), `lastUpdated` `2026-09-20`, `createdAt` stays a full timestamp (`2026-10-16T03:04:05.678Z`), the field list is identical to the input (flat), and other nulls (`legacyId`, `city`) are kept. All passed. Because the table is empty, this is the only check of the date formatting so far; it was not exercised through the API with real rows.
+- **No database writes:** the route calls only `findMany` (a search of the two source files found no `create`, `update`, `delete`, `upsert` or raw-SQL call). PostgreSQL's write counters for `Opportunity` were 45 inserts, 6 updates and 0 deletes before the first request, and exactly the same after all requests (the 45 and 6 are the rolled-back test rows from Step 2.7, which PostgreSQL counts even though they were rolled back). `Opportunity` still has 0 rows and `_prisma_migrations` still has 1.
+- **Lint:** `npm run lint` passes with no warnings.
+- **No unexpected files or dependencies:** `git status` shows only the new `app/api/`, `lib/serializeOpportunity.js` and the previously approved untracked `design-reference/`. `package.json` and `package-lock.json` are unchanged.
+- **Original OpenRaiz repo:** 0 changed files, commit `0113d35`, file-timestamp fingerprint matches the Step 1 baseline. The Prisma schema was not modified. No credentials were printed (output was filtered), and a scan of this log found none.
+- **Not yet confirmed by the user:** the user has not yet opened `http://localhost:3000/api/opportunities` in their own browser. The dev server was restarted afterwards so they can.
+
+### How a request travels (plain English)
+1. **Browser:** you open `http://localhost:3000/api/opportunities` (later, our React page will call it with `fetch`). The browser sends an HTTP `GET` request to the Next.js server running on your computer. Your browser never talks to the database.
+2. **Next.js:** it matches the URL to the file `app/api/opportunities/route.js` and runs its `GET` function **on the server**.
+3. **Prisma:** that function calls `prisma.opportunity.findMany()`. `lib/prisma.js` holds the one shared Prisma Client, which was created with the pooled `DATABASE_URL` from `.env` (read only on the server). Prisma turns `findMany()` into a SQL `SELECT` on the `Opportunity` table.
+4. **PostgreSQL (Neon):** the `pg` driver sends the SQL over an encrypted connection to the Neon development branch. PostgreSQL reads the table and sends back the rows (right now zero).
+5. **Back up the chain:** Prisma turns the rows into JavaScript objects (dates become JavaScript `Date`s). `serializeOpportunity` turns each date into `YYYY-MM-DD` text. `Response.json(...)` converts the list into JSON text, and Next.js sends it back to the browser as an HTTP response with status 200. Right now that text is `[]`.
+6. **If something fails** (for example the database is unreachable), the `catch` block logs a short note on the server and sends only a generic 500 message, so no connection details or SQL ever reach the browser.
+
+### Errors or mistakes identified
+- None in the code or tests. The unrequested `orderBy` is listed above as a deviation. (Two automated notifications about servers I stopped on purpose were not from the user and required no action.)
+
+### Corrections made
+None.
+
+### Git
+- **Files that would be committed:** `app/api/opportunities/route.js`, `lib/serializeOpportunity.js` and `PROMPT_LOG.md`. `design-reference/` stays out.
+- **Proposed commit message:** `Add GET /api/opportunities endpoint with date serialization`
+- **Commit message:** `Add GET /api/opportunities endpoint with date serialization` (no Co-Authored-By trailer)
+- **Follow-up prompt:** `Yes, commit and push the endpoint files`. The user did not report opening the endpoint in their own browser, so that check stays unconfirmed by the user.
+- **Pre-commit checks (agent):** only `app/api/opportunities/route.js`, `lib/serializeOpportunity.js` and `PROMPT_LOG.md` staged; `.env`, `design-reference/`, `generated/` and `.next/` not staged; a scan of the staged diff found no credential, hostname or endpoint parts.
 - **Commit reference:** PENDING — the hash is not known until the commit exists; to be recorded in a later log update.
