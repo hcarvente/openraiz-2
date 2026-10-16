@@ -1676,4 +1676,217 @@ None.
 - **Commit message:** `Add GET /api/opportunities endpoint with date serialization` (no Co-Authored-By trailer)
 - **Follow-up prompt:** `Yes, commit and push the endpoint files`. The user did not report opening the endpoint in their own browser, so that check stays unconfirmed by the user.
 - **Pre-commit checks (agent):** only `app/api/opportunities/route.js`, `lib/serializeOpportunity.js` and `PROMPT_LOG.md` staged; `.env`, `design-reference/`, `generated/` and `.next/` not staged; a scan of the staged diff found no credential, hostname or endpoint parts.
+- **Commit reference:** `1222c8c545378414d76fdd3a5d269d85b3913597` (short `1222c8c`), 3 files changed (`route.js`, `serializeOpportunity.js`, `PROMPT_LOG.md`; 167 lines added); pushed to `origin/main`; `git ls-remote origin main` returned the same hash. Recorded here during Step 3.2.
+
+---
+
+## Milestone 3, Step 3.2 — POST /api/opportunities
+
+- **Date:** 2026-10-16 (UTC; the work started on the evening of 2026-10-15 US Pacific time)
+- **Objective:** Build `POST /api/opportunities`, which validates a flat JSON body on the server and saves a new opportunity in the Neon **development** database through Prisma. No PATCH, DELETE, frontend, import, authentication or schema changes.
+- **Previous commit:** `1222c8c` (`Add GET /api/opportunities endpoint with date serialization`).
+
+### Exact prompts
+1. ```
+   I approve Milestone 3, Step 3.2: Building the POST Opportunities API endpoint.
+   Architectural decisions
+   1. Accept a flat JSON request body matching our existing Opportunity model.
+   2. Use server-side validation without adding new dependencies.
+   3. Keep the response format consistent with our GET endpoint.
+   4. Return HTTP 201 when an opportunity is successfully created.
+   5. Return HTTP 400 for invalid input.
+   6. Return a generic HTTP 500 response for unexpected server errors.
+   Objective
+   Implement:
+   POST /api/opportunities
+   This endpoint should validate submitted opportunity information and save a new record in our Neon development database using Prisma.
+   Step 1 — Validation
+   Create:
+   lib/validateOpportunity.js
+   Implement validation for:
+   - Required text fields.
+   - Allowed enum values.
+   - Valid calendar dates using YYYY-MM-DD and UTC.
+   - Optional or null application deadlines.
+   - Valid location types.
+   - Appropriate location information.
+   - Valid application methods and values.
+   - Required boolean values.
+   - Basic compensation consistency.
+   Reject unknown fields and prevent clients from supplying generated or protected fields such as id, createdAt, legacyId, and lastUpdated.
+   Preserve our existing database model and enum values.
+   Do not require deadlines to be in the future, because OpenRaiz may eventually contain historical opportunities.
+   For compensation, reject obvious contradictions, such as isPaid: true with compensation: "Unpaid", but avoid introducing complicated compensation parsing.
+   Step 2 — POST endpoint
+   Extend:
+   app/api/opportunities/route.js
+   Add a POST handler that:
+   1. Receives JSON.
+   2. Validates the submitted information.
+   3. Converts approved date strings into UTC Date objects.
+   4. Creates the opportunity using prisma.opportunity.create().
+   5. Returns the created opportunity using our existing serialization helper.
+   6. Responds with HTTP 201.
+   Invalid JSON or invalid fields should return clear HTTP 400 responses.
+   Unexpected failures should return a generic HTTP 500 response without exposing database details.
+   Security
+   This endpoint is currently intended only for local development.
+   We do not have authentication or authorization implemented.
+   Do not deploy or expose unrestricted administrative write endpoints publicly.
+   Keep all database operations on the server.
+   Step 3 — Testing
+   Test the following scenarios:
+   1. A valid fictional opportunity creates successfully.
+   2. An empty required field is rejected.
+   3. An invalid enum is rejected.
+   4. An impossible calendar date is rejected.
+   5. Malformed JSON is rejected.
+   6. Invalid application URLs or email addresses are rejected.
+   7. Unknown or protected fields are rejected.
+   8. An obvious compensation contradiction is rejected.
+   Verify that invalid requests do not create database records.
+   After successfully creating an opportunity, call:
+   GET /api/opportunities
+   Confirm that the saved opportunity appears in the response and remains available on a subsequent request.
+   Test data decision
+   Keep one clearly fictional opportunity in the Neon development database for our upcoming frontend work.
+   Before removing any additional test records, tell me which records would be removed and ask for approval.
+   Do not modify production data.
+   Step 4 — Verification
+   1. Confirm POST returns HTTP 201 for a valid request.
+   2. Confirm invalid requests return HTTP 400.
+   3. Confirm GET retrieves the newly created opportunity.
+   4. Confirm the data is stored in Neon development.
+   5. Run lint and build checks.
+   6. Confirm no database schema changes or migrations were introduced.
+   7. Confirm the original OpenRaiz repository remains unchanged.
+   Step 5 — Documentation
+   Update PROMPT_LOG.md with:
+   - Milestone 3, Step 3.2.
+   - This exact prompt.
+   - Files created or modified.
+   - Commands executed.
+   - Test results.
+   - Errors and corrections.
+   - An explanation of the POST request's data flow.
+   - The previous commit reference 1222c8c.
+   Do not fabricate verification results.
+   Step 6 — Git
+   After verification:
+   1. Show me the changed files.
+   2. Propose a descriptive commit message.
+   3. Wait for my approval before committing or pushing.
+   Important constraints
+   Do not implement PATCH or DELETE.
+   Do not build frontend components.
+   Do not import the original ten opportunities.
+   Do not modify the Prisma schema.
+   Do not introduce authentication.
+   Stop after completing Step 3.2.
+   ```
+   (The user's message before this one was the approval of the Step 3.1 commit `1222c8c`, "Yes, commit and push the endpoint files"; the agent's plan and two questions for this step were given in chat, and this prompt contains the user's answers.)
+
+### Files created or modified
+- **Created:** `lib/validateOpportunity.js` (the validator, no new dependencies).
+- **Modified:** `app/api/opportunities/route.js` (added the `POST` handler, the imports, and a security comment at the top; the `GET` handler is unchanged), `PROMPT_LOG.md` (this entry).
+- `package.json`, `package-lock.json` and everything in `prisma/` are unchanged (no new dependency, no schema change, no migration).
+
+### What the validator does (`lib/validateOpportunity.js`)
+Returns `{ ok: true, data }` (ready for `prisma.opportunity.create()`) or `{ ok: false, errors }` (a list of `{ field, message }` that only describes the client's own input).
+- **Body:** must be a JSON object (not an array, null, string or number).
+- **Unknown fields** are rejected. **Protected fields** `id`, `legacyId`, `createdAt`, `lastUpdated` are rejected with "set by the server". **Deviation to note:** the agent also made `source` protected, because the original data and docs treat `source` as server-controlled (`owner-added`; `employer-submitted` is reserved for a future submission workflow). The server sets it through the database default.
+- **Required text:** `title` (max 200), `organization` (200), `description` (5,000), `compensation` (200), `applyMethodValue` (500). Text is trimmed; empty, whitespace-only, missing or non-text values are rejected. Optional `city`, `state` (100 each) and `address` (300) may be missing, null or empty (stored as null).
+- **Enums:** `type`, `livedExperienceRelevance`, `locationType`, `applyMethodType` (required) and `status` (optional; the database default `active` applies when it is missing) must match the approved values exactly (case-sensitive). The lists in the validator were checked to match the Prisma enums.
+- **Boolean:** `isPaid` is required and must be `true` or `false` (not the text "true").
+- **Dates:** `datePosted` (required) and `deadline` (optional, null or empty means rolling) must be written `YYYY-MM-DD`, be a real calendar date (so `2026-02-30` and `2027-02-29` fail), and fall in the years 2000 to 2100; they become UTC midnight `Date` objects. Past deadlines are allowed.
+- **Location:** remote listings must have no city, state or address; hybrid and onsite listings must have a city and a state (address stays optional), following the original docs.
+- **Application method:** `url` values must be `http://` or `https://` links (no spaces, host name containing a dot, so `javascript:`, `ftp:` and `https://localhost` are rejected); `email` values must look like an email address.
+- **Compensation consistency (no pay parsing):** `isPaid: true` is rejected when the compensation text starts with "unpaid", "not paid", "no pay", "no compensation" or "volunteer"; `isPaid: false` is rejected when it starts with "paid". Text like "Stipend, $500/month" is accepted either way.
+- These strictness choices (years 2000 to 2100, a dot required in the URL host name, city and state required for hybrid or onsite) are the agent's judgment calls and can be relaxed.
+
+### What the POST handler does (`app/api/opportunities/route.js`)
+1. Reads the JSON body; if it is empty or malformed, returns HTTP 400 `{"error":"Request body must be valid JSON."}`.
+2. Validates it; if invalid, returns HTTP 400 `{"error":"Invalid opportunity data.","details":[{field, message}, ...]}`.
+3. Calls `prisma.opportunity.create({ data })` and returns the new row through `serializeOpportunity` with HTTP 201.
+4. If the database call fails, logs only the error's name and code on the server and returns HTTP 500 `{"error":"Could not create the opportunity."}`.
+The top of the file now states that POST is for local development only because there is no authentication.
+
+### Commands executed
+- `npm run lint`, `npm run build`
+- Validator unit tests: an inline Node script (no database) with 71 cases; a check that the validator's value lists match the Prisma enums (`generated/prisma/enums.ts`); a check that every model field is exactly one of required, optional or protected
+- `curl` against the running dev server (`http://localhost:3000/api/opportunities`): 25 invalid POST requests, 2 valid POST requests, and GET requests
+- Read-only inline Node scripts using `pg` (output filtered to hide URLs and hostnames): row counts and PostgreSQL's write counters for `Opportunity` before and after, and a read of the stored rows as raw text
+- `npx prisma migrate status` and `npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code`
+- `npx next start -p 3001` with a fake, unreachable `DATABASE_URL` (a made-up local address and password, never a real credential) to test the 500 response; `pkill` of the servers I started (the dev server was stopped before building and restarted afterwards)
+- `git status --short`, `git diff --quiet`; in the original repo `git status --short`, `git rev-parse --short HEAD` and the file-timestamp fingerprint
+No migration, no schema change, no delete or update of any row.
+
+### Test results (only what actually ran)
+**Validator alone (no database):** 71 cases, 0 failures: 10 valid inputs accepted (including remote with null or missing deadline, a past deadline, no address, status archived, an email apply method, "Stipend" text with isPaid true, and the leap day 2028-02-29) and every invalid case rejected with the right field named.
+
+**The 8 scenarios through the real API (dev server), all with fictional data:**
+1. **Valid fictional opportunity:** HTTP 201 Created, twice (see below).
+2. **Empty required field:** HTTP 400 for an empty `title` and a missing `organization`.
+3. **Invalid enum:** HTTP 400 for `type: "contract"` and `locationType: "moon"`, with the allowed values listed.
+4. **Impossible calendar date:** HTTP 400 for `datePosted: "2026-02-30"` and `deadline: "2026-13-01"`.
+5. **Malformed JSON:** HTTP 400 `{"error":"Request body must be valid JSON."}` for truncated JSON, plain text, an empty body and single-quoted JSON; HTTP 400 "must be a JSON object" for valid JSON that is an array or `null`.
+6. **Invalid URL or email:** HTTP 400 for `not a url`, `javascript:alert(1)` and the email `a@b`.
+7. **Unknown or protected fields:** HTTP 400 for `isAdmin` ("Unknown field") and for `id`, `createdAt`, `legacyId` and `lastUpdated` ("set by the server and cannot be supplied").
+8. **Compensation contradiction:** HTTP 400 for `isPaid: true` with "Unpaid", and for `isPaid: false` with "Paid, $24/hr". A request with three mistakes returned all three in `details`.
+All 25 invalid requests returned HTTP 400. **Invalid requests created no records:** after all of them, `Opportunity` had 0 rows and PostgreSQL's insert counter was unchanged at 45 (the rolled-back test rows from Step 2.7), so not even an insert attempt reached the database.
+
+**Valid creates and read-back:**
+- Valid POST #1 (hybrid fellowship, `deadline` 2026-12-15) returned HTTP 201 Created with a JSON content type. The agent did not capture its response body (see Errors).
+- Valid POST #2 (remote volunteer, no `deadline`, no `status`) returned HTTP 201 and the complete body was captured: 21 fields, `legacyId` null, `status` `active` (database default), `source` `owner-added`, `datePosted` `2026-10-16`, `deadline` null, `lastUpdated` `2026-10-16`, a cuid-style `id`, and `createdAt` as a full timestamp.
+- `GET /api/opportunities` returned both records (2 rows), and a second, later GET returned both again. The POST #2 body is identical JSON (same 21 fields, same key order, same formats) to the matching GET item, so the response format is consistent with GET.
+- **Stored in Neon development:** a direct read from the development branch (confirmed by the endpoint fingerprint from Step 2.6B; not production) found exactly these 2 rows, with `datePosted` `2026-10-16` and the deadlines stored as `2026-12-15` and null, `lastUpdated` `2026-10-16`, and `createdAt` timestamps. PostgreSQL's insert counter rose from 45 to 47 (exactly the two successful creates).
+
+**Unexpected server error (production build with a fake unreachable database address, no real database involved):** a valid POST returned HTTP 500 and exactly `{"error":"Could not create the opportunity."}`. A search of the response for ten sensitive strings (the fake password, the fake user, `127.0.0.1`, `postgresql`, the fake database name, `ECONNREFUSED`, `prisma`, `insert`, `Opportunity"`, `P1001`) found none. The server console logged only `POST /api/opportunities failed: PrismaClientKnownRequestError P1001`. An invalid POST in the same situation still returned the clear 400 message (validation runs before the database is touched); the status code of that last request was cut off by my command and was not displayed, though the 400 behavior was already shown in the main run.
+
+**Other verification:** `npm run lint` passes; `npm run build` compiles successfully and `/api/opportunities` is `ƒ (Dynamic)`. `npx prisma migrate status`: "Database schema is up to date!"; the live-database-vs-schema comparison returned exit code 0 (no differences); `_prisma_migrations` still has 1 record; `prisma/migrations/` still holds only the original migration. The original OpenRaiz repo: 0 changed files, commit `0113d35`, fingerprint matches the Step 1 baseline. Production was not targeted (the strings in use still match the development endpoint fingerprint). No credentials were printed (output was filtered), and a scan of this log found none.
+- **Not yet confirmed by the user:** the user has not run any of these requests or looked at the data themselves.
+
+### Test data currently in the Neon development database (both clearly fictional, both committed)
+1. **Keep (as the user instructed):** `cmvabung80000uoitdge182wa`, "Youth Policy Fellow (Fictional Test Listing)", Fictional Policy Collective, hybrid fellowship in Oakland CA, paid, deadline 2026-12-15.
+2. **Extra, removed after the user's approval:** `cmvabv9ni0001uoitauuqxrpq`, "Peer Mentor (Fictional Test Listing 2)", Fictional Harbor Collective, remote unpaid volunteer. It existed only because the first request's response body was not captured. The agent proposed its removal in chat; the user approved it (prompt 2 below), and it was deleted (see "Approved deletion").
+Nothing was changed in production.
+
+### Data flow of a POST request (plain English)
+1. **Browser or client:** something (right now `curl`; later the React form) sends an HTTP `POST` to `/api/opportunities` with the opportunity written as JSON text in the body.
+2. **Next.js:** it runs the `POST` function in `app/api/opportunities/route.js` on the server.
+3. **Parse:** the function reads the body as JSON. If it is not valid JSON, it stops and answers 400.
+4. **Validate:** `validateOpportunity` checks every field (required text, allowed enum values, real dates, location, apply link or email, pay consistency, unknown or protected fields). If anything is wrong, it stops and answers 400 with a list of what to fix. No database is touched.
+5. **Convert:** a valid body becomes clean data: text trimmed, empty optional values as null, and dates turned into UTC `Date` objects.
+6. **Prisma:** `prisma.opportunity.create({ data })` (from `lib/prisma.js`) turns that into a SQL `INSERT`. Prisma fills in the generated fields: a new `id`, `createdAt`, `lastUpdated`, and the defaults for `status` and `source`.
+7. **PostgreSQL (Neon):** the `pg` driver sends the `INSERT` over an encrypted connection to the development branch. PostgreSQL checks the table rules (required columns, enum values, unique `legacyId`), stores the row and returns it.
+8. **Back to the client:** Prisma hands the saved row back to the route, `serializeOpportunity` formats the dates, and the route answers HTTP 201 with the new opportunity as JSON. A later `GET` reads that same row from PostgreSQL.
+9. **If the database fails** at step 6 or 7, the route logs a short note on the server and answers a generic 500, so no connection details or SQL reach the client.
+
+### Errors or mistakes identified
+- I ran the first valid POST with `curl -i ... | sed`, which dropped the response body. I confirmed the status (HTTP 201) but not the body, and could not repeat the request without creating a duplicate. I sent a second valid request (with a different record, which also covered remote, no deadline and the default status) and captured its full body. This created the extra test record listed above.
+- My first check that the validator's field lists cover every model field crashed: the arrays have trailing commas, which strict JSON parsing rejects. This was a bug in the agent's check script, not in the validator. The check was rewritten and passed (11 required, 5 optional, 5 protected; all 21 model fields covered exactly once).
+- The agent added `source` to the protected fields and set the strictness limits described above; these go beyond the prompt's list.
+- A `cut` in one of my test commands hid the status code of an invalid request in the fake-database test (described above).
+- When I restarted the dev server at the end, the first attempt failed (`ENOENT ... package.json`): the background command ran from the parent folder instead of the project folder, so npm found no `package.json`. It was an environment mistake in how I started it, not a code problem. I restarted it with `npm --prefix <project folder> run dev`, and it then served both records with HTTP 200.
+- (Several automated notifications about servers I stopped on purpose were not from the user and required no action.)
+
+### Corrections made
+- Sent the second valid request to capture the body, as described. Rewrote the field-coverage check with tolerant parsing. Recorded the earlier commit reference `1222c8c` in the Step 3.1 entry.
+
+### Security notes
+- This endpoint has **no authentication**. It is for local development only, and must not be deployed publicly until sign-in and authorization checks exist. The route file now says so at the top.
+- Not added in this step (possible later hardening): a request-size limit, rate limiting, and logging of who created a record.
+
+### Follow-up prompt and approved deletion
+2. ```
+   Yes, delete the extra record and commit and push
+   ```
+   → Approval to delete the one extra test record and to commit and push the proposed files with the proposed message.
+
+**Approved deletion (development branch only):** an inline script confirmed it was targeting the development endpoint (not production), then, inside a transaction, ran a `DELETE` limited by `id`, `title` **and** `organization` for the record `cmvabv9ni0001uoitauuqxrpq` ("Peer Mentor (Fictional Test Listing 2)"). The transaction was set to roll back unless exactly 1 row was deleted and exactly 1 row (the kept record) remained. Result: committed, exactly 1 row deleted; `Opportunity` now holds 1 row, `cmvabung80000uoitdge182wa` ("Youth Policy Fellow (Fictional Test Listing)"); `GET /api/opportunities` returns that 1 row. No other record was touched, and production was not involved.
+
+### Git
+- **Files committed:** `lib/validateOpportunity.js`, `app/api/opportunities/route.js` and `PROMPT_LOG.md`. `design-reference/` stays out (and the deleted database row is not part of any commit).
+- **Commit message:** `Add POST /api/opportunities endpoint with server-side validation` (no Co-Authored-By trailer)
+- **Pre-commit checks (agent):** only those three files staged; `.env`, `design-reference/`, `generated/` and `.next/` not staged; a scan of the staged diff found no credential, hostname or endpoint parts.
 - **Commit reference:** PENDING — the hash is not known until the commit exists; to be recorded in a later log update.
