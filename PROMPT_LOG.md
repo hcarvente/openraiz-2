@@ -788,5 +788,8 @@ The test ran in plain Node using a small resolver, not inside Next.js. Next's bu
 - Added `generated/**` to the ignore list in `eslint.config.mjs`, so generated code is not linted. Lint then passed with no warnings. This is a small change beyond the files named in the prompt, made only to fix the warnings above.
 
 ### Git
-- **Commit message:** PENDING — nothing committed; awaiting the user's approval.
-- **Commit reference:** PENDING.
+- **Commit message:** `Add shared Prisma client and verify Neon connection` (no Co-Authored-By trailer)
+- **Pre-commit checks (agent):** staged files were only `lib/prisma.js`, `eslint.config.mjs` and `PROMPT_LOG.md`; no `.env` or generated files staged; a scan of the staged diff found no part of the real credentials.
+- **Commit reference:** `b51b80ee2c3dbd0e9135837de9b6b046bbe8175a` (short `b51b80e`), 3 files changed; pushed to `origin/main`. `git ls-remote origin main` returned the same hash, and `git status` was clean after the push.
+- **Follow-up prompt:** `Yes, update the log and commit it`.
+- **Second commit:** `Record shared Prisma client commit in prompt log` (log-only; its hash is visible in `git log`).
