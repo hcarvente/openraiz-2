@@ -997,3 +997,180 @@ This step affects the **database design** only: no frontend, API routes or table
 - **Commit reference:** `a733f031f99894dd58a9fd75b6fe29423c066668` (short `a733f03`), 2 files changed; pushed to `origin/main`. `git ls-remote origin main` returned the same hash, and `git status` showed only the untracked `design-reference/`.
 - **Follow-up prompt:** the user approved a documentation-only commit with the message `Record Opportunity model commit in prompt log` (the first part of their next message, quoted in full under Step 2.6A).
 - **Second commit:** `Record Opportunity model commit in prompt log` (log-only; its hash is visible in `git log`).
+
+---
+
+## Milestone 2, Step 2.6A — Migration preparation (no database changes)
+
+- **Date:** 2026-10-15
+- **Objective:** Before creating the first migration: record the Step 2.5 commit hash (documentation-only commit), run read-only pre-flight checks, determine which Neon branch the local connection strings point to, plan a safer development branch, and review the proposed migration SQL against the approved schema. The migration is **not** generated or applied in this step, and the database is not changed.
+
+### Exact prompts
+1. ```
+   I approve the documentation-only follow-up commit for Step 2.5.
+   Use the commit message:
+   Record Opportunity model commit in prompt log
+   Confirm that only PROMPT_LOG.md is staged, review the diff, and verify that no credentials are included.
+   Commit and push the documentation update to origin/main.
+   Next: Step 2.6A — Migration preparation
+   I approve beginning the migration preparation process, but I do not yet approve applying the migration.
+   Before generating anything:
+   1. Run npx prisma validate.
+   2. Run npx prisma migrate status.
+   3. Confirm the database schema is currently empty.
+   4. Confirm the Git working tree is clean, apart from our previously approved untracked design-reference image.
+   5. Determine which Neon branch our local database connection strings reference.
+   Important Neon precaution
+   Our existing Neon branch is named production.
+   I would prefer to perform development migrations against a separate Neon development branch.
+   Please determine whether our current configuration points to the production branch.
+   If it does, explain the safest way to create a development branch and use it for this project.
+   Do not create the branch or change connection strings without my approval.
+   Migration preparation
+   Once we have confirmed the appropriate development database, we will generate the initial migration SQL for review.
+   The migration should create:
+   - The five approved enum types.
+   - The Opportunity table.
+   - The unique index on legacyId.
+   - Prisma's migration tracking infrastructure, where applicable.
+   The Opportunity table should initially contain zero records.
+   Review the proposed SQL against the approved Prisma schema.
+   Do not apply the migration yet.
+   Do not reset the database.
+   Do not import sample opportunities.
+   Do not create API endpoints or frontend components.
+   Documentation
+   Update PROMPT_LOG.md with the exact prompt, commands executed, verification results, and any issues encountered.
+   Do not record tests as successful unless they actually ran.
+   Stop and wait for my approval before making any database changes.
+   ```
+   (The user's message before this one asked the agent to plan Step 2.6; the agent's plan is in chat and is summarized under "Plan proposed" below.)
+
+### Documentation-only commit (first part of the prompt)
+- Only `PROMPT_LOG.md` staged; diff reviewed (it only replaced the two PENDING lines of Step 2.5's Git section with the commit details); a scan found no part of the real credentials.
+- **Commit:** `7d3e9117b6f915a7a05b71ec419b22923cbdd6bd` (short `7d3e911`), `Record Opportunity model commit in prompt log`; pushed to `origin/main`; `git ls-remote` returned the same hash. `design-reference/` stayed untracked.
+
+### Commands executed (all read-only; the project folder was not changed by them)
+- `npx prisma validate`
+- `npx prisma migrate status`
+- An inline Node script (no files written) that opened a read-only connection with each connection string and ran `SELECT current_database()`, a count of user tables in `information_schema.tables`, a count of enum types, and `current_setting('neon.endpoint_id')`; it printed no hostnames or passwords (only yes/no results and a short non-reversible fingerprint)
+- `npx prisma migrate diff --from-empty --to-schema prisma/schema.prisma --script` (offline: prints SQL from the schema, does not connect to the database), run twice, with an inline script that compared the SQL to `schema.prisma`
+- `git status --short`, `git log --oneline -1`
+All command output was filtered to hide URLs and Neon hostnames.
+
+### Verification results (only what actually ran)
+- **`npx prisma validate`:** the schema is valid.
+- **`npx prisma migrate status`:** reported `No migration found in prisma/migrations` and `The current database is not managed by Prisma Migrate`. This is expected for an empty database that has never been migrated; it is not an error. (The tool's link text mentions baselining an "existing production database"; that does not apply here.)
+- **Database is empty:** through both the direct and the pooled connection, database `neondb`, schema `public`: 0 user tables and 0 enum types.
+- **Both connections work:** the direct and pooled strings both connected successfully (no timeout this time).
+- **Git:** the working tree was clean except the approved untracked `design-reference/` folder (HEAD `7d3e911`).
+- **Which Neon branch?** Findings:
+  - The pooled and direct strings point to the **same Neon compute endpoint** (checked without printing it), the pooled string has `-pooler` and the direct one does not, and both use database `neondb`.
+  - Neon identifies a branch by the compute endpoint in the connection string, but the branch's *name* is not exposed to the database, so the name cannot be read from the local files or by querying the database.
+  - Evidence that it is the **`production`** branch: while copying the strings, the user reported that the Connect dialog's branch said "production" (the default branch of a new project). No other branch is known to exist.
+  - Conclusion: the current configuration very likely points to `production`, but that is inferred, not proven by a tool. The user can confirm in the Neon console (Branches page, compare the branch's endpoint ID with the host in `.env`).
+- **Proposed migration SQL reviewed against the approved schema (offline script):** 8 statements, all `CREATE`: `CREATE SCHEMA IF NOT EXISTS "public"` (a no-op, since it exists), 5 `CREATE TYPE ... AS ENUM`, 1 `CREATE TABLE "Opportunity"`, 1 `CREATE UNIQUE INDEX` on `legacyId`. Matches the schema: the 5 enums and their values; all 21 columns with the right types, required/optional status and defaults (`status` default `active`, `source` default `owner-added`, `createdAt` default current time; `id` and `lastUpdated` have no database default because Prisma fills them in); primary key on `id`. It contains no INSERT, DROP, ALTER, DELETE or UPDATE statement, so no rows are created. Prisma's tracking table `_prisma_migrations` is not in this SQL; Prisma creates it itself when a migration is first applied.
+- **Not done in this step:** no migration file was generated (`prisma/migrations/` still does not exist), no migration applied, no table created, no reset, no import, no API or frontend change.
+
+### Plan proposed (awaiting the user's decision)
+Using a separate Neon development branch:
+1. In the Neon console, create a branch named `development` from `production` (current data; the database is empty anyway) with a read-write compute.
+2. From the Connect dialog on the `development` branch, copy the pooled and direct strings and replace the values in `.env`. Keep real credentials only in `.env` (never in chat or the log); keep only development credentials on this computer.
+3. Re-run the same read-only checks to confirm the new strings point to a different endpoint than before, with 0 tables.
+4. Then generate the migration file for review (`npx prisma migrate dev --create-only --name init`), review, and only after approval apply it.
+Notes: a child branch can later be reset from its parent, which makes migration experiments safer. Migrations will later be applied to `production` separately (with `prisma migrate deploy`) when a deployment needs it. Branch limits depend on the Neon plan and should be checked in the console.
+
+### Issues encountered
+- My first automated check of the SQL reported one difference: a test that searched the SQL for the words INSERT, DROP, ALTER, DELETE or UPDATE matched "Update" inside the column name `lastUpdated`. A second check of the actual statement types (8 statements, all `CREATE`) showed this was a false positive in my check, not a problem with the SQL.
+- The session's scratchpad folder became unavailable during this step, so the checks above ran as inline scripts with no temporary files; the older helper scripts from earlier steps (outside the project) were not used.
+- The branch name cannot be determined by a tool (see above); this is stated as an inference.
+
+### Errors or mistakes identified
+- The false-positive check above (agent's check, not the SQL).
+
+### Corrections made
+- Replaced the word-search check with a statement-type check.
+
+### Git
+- **Commit message:** PENDING — nothing committed for this entry; awaiting the user's decision on the Neon branch and approval.
+- **Commit reference:** PENDING.
+
+---
+
+## Milestone 2, Step 2.6B — Switch the local configuration to the Neon `development` branch
+
+- **Date:** 2026-10-15
+- **Objective:** Point the local `.env` at the new Neon `development` branch (child of `production`) instead of `production`, and verify the switch without printing any credentials. No migration, tables, import, API or frontend changes.
+
+### Exact prompts
+1. ```
+   I've successfully created a new Neon database branch named development, using production as the parent.
+   I can access the Connect dialog and retrieve both connection strings.
+   Your task is to help me configure OpenRaiz 2.0 to use the new development database.
+   Please guide me through updating my local .env file:
+   - DATABASE_URL should contain the pooled connection string from the development branch.
+   - DIRECT_URL should contain the direct connection string from the development branch.
+   Do not display or print the connection strings or credentials.
+   Verification requirements:
+   1. Confirm both variables are configured.
+   2. Verify both connection strings reference the same development database and its corresponding pooled/direct endpoints.
+   3. Confirm they do not reference the original production endpoint.
+   4. Test connectivity using a read-only query such as SELECT 1.
+   5. Confirm the development database contains zero application tables and zero custom enum types.
+   6. Confirm .env is excluded from Git.
+   7. Confirm the production database has not been modified.
+   8. Confirm the original OpenRaiz repository remains unchanged.
+   If you cannot conclusively identify the Neon branch from the connection strings, explain how I can verify the correct endpoint in the Neon console.
+   Documentation:
+   Update PROMPT_LOG.md with this step, including the exact prompt, commands executed, verification results, and any corrections.
+   Never include database credentials or connection strings in the log.
+   Git:
+   Once verification passes, propose a documentation-only commit.
+   Do not commit or push without my approval.
+   Important constraints:
+   Do not generate or apply database migrations.
+   Do not create tables or import opportunities.
+   Do not modify frontend components or API routes.
+   Stop after verifying the development database connection.
+   ```
+2. ```
+   done
+   ```
+   → The user had replaced both values in `.env` (in VS Code, from the Neon Connect dialog with the `development` branch selected). The agent then ran the verification below.
+
+### Work done by the user
+Created the `development` branch in the Neon console (parent `production`), copied the pooled and direct strings from the Connect dialog with the `development` branch selected, and pasted them into `.env`. The user did not paste any credentials into chat. The old production strings are no longer on this computer (they can be re-copied from the Neon console by selecting the `production` branch).
+
+### Commands executed (read-only)
+- Before the switch: an inline Node script (no files written) compared each connection string's endpoint, via a short non-reversible fingerprint, to the production fingerprint recorded in Step 2.6A. It showed both strings still pointed to production, so the user was given the steps to update `.env`.
+- After the switch: one inline Node script using the `pg` package that checked the variables and opened a read-only connection with each string, running `SELECT 1`, `SELECT current_database()`, a count of user tables in `information_schema.tables`, a count of custom enum types, and `current_setting('neon.endpoint_id')`. Output was filtered so no URL or hostname could appear, and the script printed only PASS/FAIL results and fingerprints.
+- `git check-ignore -v .env`, `git status --short`, `git ls-files | grep "^\.env$"`
+- In the original repo: `git status --short`, `git rev-parse --short HEAD`, and the same file-timestamp fingerprint used in Step 1.
+
+### Verification results (only what actually ran)
+All items below passed unless marked otherwise.
+1. **Configured:** `DATABASE_URL` and `DIRECT_URL` are both set and not placeholders.
+2. **Same development database, corresponding endpoints:** the `DATABASE_URL` host is the pooled one (`-pooler`); the `DIRECT_URL` host is the direct one; both belong to one compute endpoint; both use database `neondb` and `sslmode=require`.
+3. **Not production:** the endpoint fingerprint of both strings differs from the production fingerprint recorded in Step 2.6A. The server-reported endpoint on each connection also differs from production's.
+4. **Connectivity:** `SELECT 1` returned 1 through both the direct connection (about 1.4 s) and the pooled connection (about 0.5 s). The server-reported endpoint matched the URL host on each.
+5. **Empty:** through both connections, application tables: 0; custom enum types: 0.
+6. **`.env` excluded from Git:** `git check-ignore` matches `.gitignore:34 .env*`, `.env` is not tracked, and `git status` shows only the modified `PROMPT_LOG.md` and the approved untracked `design-reference/`.
+8. **Original repo unchanged:** 0 changed files, commit `0113d35`, and the file-timestamp fingerprint matches the Step 1 baseline.
+- **Item 7 — production not modified: NOT directly re-verified.** After the switch, the local files no longer hold production credentials, so the agent could not query production. What is established: the last read-only look at production (Step 2.6A) showed 0 tables and 0 enum types, and no command run since then writes to any database (only `SELECT` queries; no migration, no table creation, no import). To check directly, the user can open the `production` branch in the Neon console's Tables page; it should be empty.
+- **Branch identity:** the branch name cannot be read from the connection strings or the database. The user can confirm in the Neon console (Branches page → `development`): its compute endpoint ID (starting `ep-`) should match the first part of the host in `.env`, ignoring `-pooler`. The user has not reported doing this check.
+- **Not done (as required):** no migration file generated, no migration applied, no table created, no import, no change to frontend or API code.
+
+### Issues encountered
+None. The verification ran correctly on the first attempt.
+
+### Errors or mistakes identified
+None in this step.
+
+### Corrections made
+None.
+
+### Git
+- **Commit message:** `Record migration preparation and development branch setup in prompt log` (no Co-Authored-By trailer); documentation-only, includes the Step 2.6A and Step 2.6B entries.
+- **Follow-up prompt:** `Yes, commit and push the documentation update`.
+- **Pre-commit checks (agent):** only `PROMPT_LOG.md` staged; `.env` and `design-reference/` not staged; a scan of the staged diff found no credential, hostname or endpoint parts.
+- **Commit reference:** PENDING — the hash is not known until the commit exists; to be recorded in a later log update.
