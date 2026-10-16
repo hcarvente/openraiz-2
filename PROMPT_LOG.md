@@ -1092,8 +1092,7 @@ Notes: a child branch can later be reset from its parent, which makes migration 
 - Replaced the word-search check with a statement-type check.
 
 ### Git
-- **Commit message:** PENDING — nothing committed for this entry; awaiting the user's decision on the Neon branch and approval.
-- **Commit reference:** PENDING.
+- **Commit message / reference:** this entry was committed together with the Step 2.6B entry in `bd29c859562d4dd13ec79692e1f1296044269654` (short `bd29c85`), `Record migration preparation and development branch setup in prompt log` (documentation only; pushed to `origin/main`). The original wording of this section ("PENDING — nothing committed for this entry") was written before that commit and was never updated; it was corrected during Step 5.1A when the agent noticed it. No file other than this log was involved.
 
 ---
 
@@ -2326,3 +2325,141 @@ The form page and `POST /api/opportunities` have **no authentication**. They are
 - **Commit reference:** `037dfa67f4e4e0aeb390837c53f40b925ebd4a2f` (short `037dfa6`), 6 files changed (1,046 insertions, 1 deletion); pushed to `origin/main`; `git ls-remote origin main` returned the same hash, the remote tree lists the three new source files, and the working tree was clean afterwards. The staged diff was reviewed first: `app/page.js` gained only the link and its wrapper, `app/globals.css` had additions only, and the new files had no debugging leftovers.
 - **Follow-up prompt:** `update the log and commit it alone first` (the user's reply to the agent's Step 5.1 plan and question about a documentation-only commit for this hash). The user did not name a commit message; the agent used `Record Opportunity form commit in prompt log`, following the earlier documentation commits.
 - **Second commit:** `Record Opportunity form commit in prompt log` (log-only; its hash is visible in `git log`).
+
+---
+
+## Milestone 5, Step 5.1A — GET /api/opportunities/[id]
+
+- **Date:** 2026-10-16 (UTC; the work started on the evening of 2026-10-15 US Pacific time)
+- **Objective:** Build `GET /api/opportunities/[id]`, which returns one opportunity as flat JSON, or a generic 404 if there is none, as a first, read-only half of Step 5.1 before PATCH. No PATCH, no update validator, no DELETE, no frontend changes, and no rows created or deleted.
+- **Previous commits:** `037dfa6` (`Add Opportunity form page with server-validated submission`) and `7d210ab` (`Record Opportunity form commit in prompt log`).
+
+### Exact prompts
+1. ```
+   I've reviewed your Step 5.1 plan and approve the overall architecture, with the following decisions.
+   Approved decisions
+   1. PATCH requests must explicitly clear city, state, and address when switching a location to remote.
+   2. An empty PATCH request should return HTTP 400.
+   3. Create a separate lib/validateOpportunityUpdate.js when we implement PATCH, reusing the existing validation rules.
+   4. Add GET /api/opportunities/[id] before implementing PATCH.
+   5. We will use a separate fictional opportunity for PATCH testing, preserving the existing three records.
+   Important validation consideration for the upcoming PATCH implementation
+   Prisma returns date fields as JavaScript Date objects, while our existing POST validator expects YYYY-MM-DD strings.
+   When we implement PATCH, normalize the existing database record using our approved serialization logic before merging it with the request.
+   Then validate the merged values and convert date strings back to the appropriate Prisma types before saving.
+   Preserve fields that weren't included in the PATCH request.
+   Do not implement PATCH yet.
+   First: Documentation
+   I approve the documentation-only follow-up commit:
+   Record Add Opportunity form commit in prompt log
+   Update PROMPT_LOG.md with the Step 4.2 commit reference:
+   037dfa6
+   Review the documentation diff, verify that no credentials are included, and commit and push only PROMPT_LOG.md.
+   Next: Step 5.1A — GET Individual Opportunity
+   Create:
+   app/api/opportunities/[id]/route.js
+   Implement:
+   GET /api/opportunities/[id]
+   The endpoint should:
+   1. Accept an opportunity ID from the URL.
+   2. Retrieve the corresponding opportunity through Prisma.
+   3. Use our existing serializeOpportunity helper.
+   4. Return the full opportunity as flat JSON with HTTP 200.
+   5. Return HTTP 404 with a generic not-found message when the ID does not exist.
+   6. Return a generic HTTP 500 response for unexpected server errors.
+   Follow the installed Next.js version's requirements for asynchronous route parameters.
+   Verification
+   1. Test the endpoint using the ID of one of our existing fictional opportunities.
+   2. Confirm the response contains the correct information.
+   3. Confirm all date fields are serialized correctly.
+   4. Test a nonexistent opportunity ID and confirm HTTP 404.
+   5. Confirm the endpoint performs no database writes.
+   6. Verify the existing GET and POST endpoints still work.
+   7. Run lint and build checks.
+   8. Confirm no database schema changes or migrations occurred.
+   9. Confirm the original OpenRaiz repository remains unchanged.
+   Documentation
+   Update PROMPT_LOG.md with the exact prompt, files changed, commands executed, verification results, and any corrections.
+   Git
+   After verification, show me the modified files and propose a commit message.
+   Do not commit or push without my approval.
+   Important boundaries
+   Do not implement PATCH yet.
+   Do not create the update validator yet.
+   Do not implement DELETE.
+   Do not modify the frontend.
+   Do not create or delete opportunities during this step.
+   Stop after Step 5.1A and wait for my approval.
+   ```
+   (The user's message before this one was `update the log and commit it alone first`, which the agent carried out as commit `7d210ab`. The agent's Step 5.1 PATCH plan and five questions were given in chat before that, and this prompt contains the user's answers.)
+
+### The documentation commit in the first part of the prompt
+The user approved a documentation-only commit `Record Add Opportunity form commit in prompt log` recording the Step 4.2 hash `037dfa6`. That hash had **already** been recorded and pushed a moment earlier as `7d210ab` (`Record Opportunity form commit in prompt log`), the agent's answer to the user's previous message, so the two messages crossed. The agent checked: the log already contains the full `037dfa67f4e4e0aeb390837c53f40b925ebd4a2f` hash for Step 4.2, local `main` equals `origin/main` (`7d210ab`), and the working tree held nothing to commit. **No additional commit was made** and the pushed commit was not amended (rewriting a pushed commit just to change its wording was judged worse than leaving it); the only difference is the commit message wording. The same check found one stale `PENDING` line (the Step 2.6A entry), which was corrected in this step's log update (see Corrections).
+
+### Decisions approved for the upcoming PATCH step (recorded here; nothing of PATCH was implemented)
+1. When PATCH switches an opportunity to remote, it must explicitly clear `city`, `state` and `address` in the same request (the server will not clear them automatically).
+2. An empty PATCH body returns HTTP 400.
+3. The update validator will be a separate new file, `lib/validateOpportunityUpdate.js`, reusing the existing validation rules; `lib/validateOpportunity.js` stays untouched.
+4. `GET /api/opportunities/[id]` comes first (this step).
+5. PATCH testing will use a separate fictional opportunity, preserving the existing three records.
+- **The user's validation note for PATCH:** Prisma returns dates as JavaScript `Date` objects, while the POST validator expects `YYYY-MM-DD` strings. PATCH must (a) normalize the existing database record with the approved serialization logic (`serializeOpportunity`), (b) merge it with the request, (c) validate the merged values, (d) convert date strings back to the proper types before saving, and (e) preserve fields not included in the request.
+- **Evidence gathered by the agent for that plan:** all 10 original OpenRaiz listings, flattened as the future import would and with the server-controlled fields removed, pass the current validator (10 of 10), so a merge-then-validate PATCH will not be blocked by an old, unrelated problem in an imported record.
+
+### Reading the bundled Next.js docs first
+The route handler docs for this Next.js version (16.4.1) show that for a dynamic route the second argument is a context object whose `params` is a **Promise**: `export async function GET(request, { params }) { const { id } = await params }`. The route follows that.
+
+### Files created or modified
+- **Created:** `app/api/opportunities/[id]/route.js` (a `GET` handler only; `[id]` in the folder name is a dynamic segment).
+- **Modified:** `PROMPT_LOG.md` (this entry and the Step 2.6A correction).
+- **Unchanged (verified with `git diff --quiet`):** `app/api/opportunities/route.js` (list and POST), everything in `lib/` (including `lib/validateOpportunity.js`; `lib/validateOpportunityUpdate.js` does **not** exist), all of `components/`, `app/page.js`, `app/globals.css`, the form page, `prisma/` (schema and migration), `package.json` and `package-lock.json`. No frontend changes and no new dependencies.
+
+### What the code does
+`GET /api/opportunities/[id]`: reads the id from the URL (`await params`); if the id contains anything other than letters, digits, hyphens and underscores, or is longer than 100 characters, it answers `404` immediately without asking the database (see Problems); otherwise calls `prisma.opportunity.findUnique({ where: { id } })`; answers `404 {"error":"Opportunity not found."}` if there is no such row (the message does not repeat the id); otherwise returns the row through the existing `serializeOpportunity` helper as flat JSON with HTTP 200 (21 fields; `datePosted`, `deadline` and `lastUpdated` as `YYYY-MM-DD`, `null` kept, `createdAt` as a full timestamp). On any unexpected error it logs only the error's name and code on the server and answers `500 {"error":"Could not load the opportunity."}`. It never writes: the only database call is `findUnique`.
+
+### Commands executed
+- Reading docs; a read-only Node script that ran the 10 original listings through the current validator
+- `npm run lint` (several times), `npm run build` (twice)
+- `npm --prefix <project folder> run dev` (background dev server); `curl` and Node `fetch` requests to the dev server
+- Read-only Node scripts using `pg`: row snapshots (`to_jsonb`, with a short SHA-256 fingerprint per row), PostgreSQL's write counters for `Opportunity`, a field-by-field read of each row
+- `DATABASE_URL="postgresql://nobody:notarealpassword@127.0.0.1:1/nodb" npx next start -p 3001` (a production build with a **fake, unreachable** address, to test the 500 response; no real credential involved) and `npx next start -p 3002` (the production build against the real development database); `pkill` of the servers I started
+- `npx prisma migrate status`, `npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code`; `git status`, `git diff --quiet`; in the original repo `git status --short`, `git rev-parse --short HEAD` and the file-timestamp fingerprint
+- **No row was created, changed or deleted.**
+
+### Verification results (only what actually ran), numbered as in the prompt
+1. **Existing fictional opportunities:** `GET /api/opportunities/<id>` was tested for all three existing records (`cmvabung80000uoitdge182wa` "Youth Policy Fellow (Fictional Test Listing)", `cmvadtgq70000kgitvumgz8ii` "Community Outreach Volunteer (Fictional Sample)", `cmvae82zz0000pwit532gndbd` "Social Media Fellow"): each returned HTTP 200 with a JSON content type.
+2. **Correct information:** for each record, all 21 fields matched a direct read from PostgreSQL, and the JSON was identical (same fields, same order) to that record's entry in `GET /api/opportunities`. Optional values came back as stored (for example `city` `"Oakland"` and a full address for the first record; `null` for the others).
+3. **Dates serialized correctly:** `datePosted`, `deadline` and `lastUpdated` came back as plain `YYYY-MM-DD` strings (for example `2026-10-16`, `2026-12-15`, `2026-10-31`); the rolling record's `deadline` stayed `null`; `createdAt` came back as a full timestamp (for example `2026-10-16T02:07:10.136Z`).
+4. **Nonexistent id gives 404:** a cuid-shaped nonexistent id returned HTTP 404 with exactly `{"error":"Opportunity not found."}`. Fourteen unusual ids were also tested (plain text, the old readable-id style (`legacyId` is not the id), an upper-case copy of a real id, a real id with a trailing space, a single character, a null byte, a null byte inside a real id, SQL-looking text, path-traversal text, unicode, 5,000 characters, 100 characters and 101 characters): all returned the same generic 404 and none of them echoed the id or contained internal strings, after the fix described under Problems. A request with broken percent-encoding (`/api/opportunities/%ZZ%`) is answered by Next.js itself with HTTP 400 "Bad Request" (an HTML page) before the route runs; this is framework behavior, it was left unchanged, and it is not a 404.
+5. **No database writes:** the route only calls `findUnique`. After all of the requests (the real ids, the unusual ids, and six other-method requests: POST, PATCH, PUT, DELETE, HEAD and OPTIONS), the 3 rows have exactly the same SHA-256 fingerprints as before the step began (`a4cf24dd`, `f48dbdf1`, `666a2202`) and PostgreSQL's insert, update and delete counters for the table are unchanged (50, 6, 2). The `POST`, `PATCH`, `PUT` and `DELETE` requests to `/api/opportunities/[id]` each returned HTTP 405 (Method Not Allowed): only GET exists there, and PATCH is **not** implemented. `OPTIONS` returned 204 with `Allow: GET, HEAD, OPTIONS`.
+6. **Existing GET and POST still work:** `GET /api/opportunities` returned HTTP 200 with 3 rows; the homepage still renders 3 cards; the Add Opportunity form page still loads (HTTP 200). `app/api/opportunities/route.js` is unchanged. Because this step must not create rows, no valid POST was sent: `POST /api/opportunities` with an **invalid** body returned HTTP 400 with 11 field errors, and with malformed JSON returned HTTP 400, which shows the route is alive and validating; the table stayed at 3 rows with unchanged fingerprints and counters afterwards. (A valid POST was not re-tested in this step.)
+7. **Lint and build:** `npm run lint` passes with no warnings; `npm run build` compiles successfully and lists `ƒ /api/opportunities` and `ƒ /api/opportunities/[id]` (server-rendered on demand). The built production version, run against the real development database, also returned HTTP 200 with all 21 fields for each of the three real ids, and 404 for a nonexistent id and for a null-byte id.
+8. **No schema changes or migrations:** `npx prisma migrate status` says "Database schema is up to date!"; the live-database-vs-schema comparison returned exit code 0 (no differences); `prisma/migrations/` still has only the original migration; `_prisma_migrations` has 1 record.
+9. **Original OpenRaiz repo:** 0 changed files, commit `0113d35`, file-timestamp fingerprint matches the Step 1 baseline. Production was not touched. No credentials were printed, and a scan of this log found none.
+- **Server error:** a production build whose database was a fake unreachable address answered a valid-looking id with HTTP 500 and exactly `{"error":"Could not load the opportunity."}`, with none of ten sensitive strings (including the requested id); the server console logged only `GET /api/opportunities/[id] failed: PrismaClientKnownRequestError P1001`. In the same situation an impossible id (a null byte) still returned 404, answered without touching the database.
+
+### Problems found, errors and corrections
+- **A real bug found by testing, fixed:** my first version passed every id straight to the database. A null byte in the id (`%00`) made PostgreSQL raise an error (Prisma code `P2039`), so the route answered **HTTP 500**, although an id that does not exist should be a 404. **Correction:** an id check before the database call (`/^[A-Za-z0-9_-]{1,100}$/`; anything else gets the same generic 404). After the fix, all 14 unusual ids returned the clean 404 and the three real ids still returned 200. A side benefit: obviously impossible ids no longer cost a database query.
+- **A test-script problem, not a route problem:** `/api/opportunities/%ZZ%` made my first test script crash on an HTML response; investigating showed Next.js's own server answers HTTP 400 before the route runs (see item 4). Not changed.
+- **A mislabeled count in a test message:** a test line said "5 other-method requests"; it was 6 (POST, PATCH, PUT, DELETE, HEAD, OPTIONS). The log uses the right number.
+- **Stale log line:** the Step 2.6A entry still said its commit was PENDING (it was committed in `bd29c85` with Step 2.6B). Corrected above.
+- **The documentation commit requested in the prompt was already done** as `7d210ab` (see above).
+- (Several automated notifications about servers I stopped on purpose were not from the user and required no action.)
+
+### Lessons learned
+- Test unusual inputs, not just the normal and the "missing" case: a null byte turned a "not found" into a server error.
+- A well-chosen id check is a cheap, safe way to turn impossible requests into a 404 without a database query.
+- When two messages cross, check the actual state of the repository before acting, and say what was already done.
+
+### Notes for Step 5.1B (PATCH): not implemented, for the next step
+- Needs a new `lib/validateOpportunityUpdate.js` (merge the serialized existing record with the request, validate with the existing rules, convert dates back to UTC `Date` objects, and write only the supplied fields), 400 for an empty body, 404 for an unknown id, explicit clearing of `city`, `state` and `address` when switching to remote, and tests on a **new** fictional row (the three existing rows must stay untouched). It will be local-only, with no authentication.
+
+### Security notes
+`GET /api/opportunities/[id]` is read-only. There is still no authentication anywhere: `POST /api/opportunities` and the Add Opportunity form are for local development only, and the comment at the top of the new route file says that any write handlers added there later (PATCH, DELETE) are local-only until sign-in and authorization exist.
+
+### Git
+- **Files that would be committed:** `app/api/opportunities/[id]/route.js` and `PROMPT_LOG.md`.
+- **Proposed commit message:** `Add GET /api/opportunities/[id] endpoint`
+- **Commit message:** `Add GET /api/opportunities/[id] endpoint` (no Co-Authored-By trailer).
+- **Follow-up prompt:** `Yes, commit and push the GET endpoint`.
+- **Pre-commit checks (agent):** exactly two files staged (`app/api/opportunities/[id]/route.js` and `PROMPT_LOG.md`); no `.env`, generated, build, package or binary files staged; a scan of the staged diff found no credential, hostname or endpoint parts; the original OpenRaiz repo unchanged (0 changed files, commit `0113d35`).
+- **Commit reference:** PENDING — the hash is not known until the commit exists; to be recorded in a later log update.
