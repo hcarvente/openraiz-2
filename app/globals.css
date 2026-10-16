@@ -507,3 +507,111 @@ body {
   color: var(--color-primary);
   font-weight: 600;
 }
+
+/* ---------- Delete button, its confirmation, and the note shown after a deletion ---------- */
+:root {
+  --color-danger: #a63a32; /* muted red for destructive actions (6.4:1 on white); the mockup's Delete is red */
+  --color-danger-dark: #8e2f28;
+}
+
+/* Edit and Delete sit together on the right of the card footer. "display: contents" lets them (and the
+   confirmation panel, which takes a full row) take part directly in the footer's flex layout. */
+.card-footer {
+  justify-content: flex-start;
+}
+
+.card-footer .card-pills {
+  margin: 0 auto 0 0;
+}
+
+.card-actions {
+  display: contents;
+}
+
+.button-danger {
+  color: var(--color-danger);
+  background: #fff;
+  border-color: var(--color-danger);
+}
+
+.button-danger:hover {
+  background: #fbefee;
+}
+
+.button-danger-solid {
+  color: #fff;
+  background: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+.button-danger-solid:hover:not(:disabled) {
+  background: var(--color-danger-dark);
+}
+
+.button-danger-solid:disabled,
+.delete-confirm .button-secondary:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.button-danger:focus-visible,
+.button-danger-solid:focus-visible {
+  outline: 3px solid rgba(166, 58, 50, 0.4);
+  outline-offset: 1px;
+}
+
+/* The confirmation takes the whole row under the pills and buttons */
+.delete-confirm {
+  flex: 1 1 100%;
+  padding: 0.8rem 1rem;
+  background: #fbefee;
+  border: 1px solid #e3b9b5;
+  border-left: 4px solid var(--color-danger);
+  border-radius: 8px;
+}
+
+.delete-confirm-text {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--color-text);
+}
+
+.delete-confirm-error {
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-danger-dark);
+}
+
+.delete-confirm-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.7rem;
+}
+
+/* "Deleted ..." note at the top of the list */
+.deleted-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin: 0 0 1rem;
+  padding: 0.7rem 1rem;
+  color: #1f5a3d;
+  background: #e3f0e8;
+  border: 1px solid #b9d8c6;
+  border-radius: 8px;
+}
+
+.deleted-notice p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.deleted-notice.is-gone {
+  color: var(--color-text);
+  background: var(--color-nav-bg);
+  border-color: #e5ded2;
+}

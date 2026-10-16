@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import SiteHeader from "@/components/SiteHeader";
 import OpportunityCard from "@/components/OpportunityCard";
+import DeletedNotice from "@/components/DeletedNotice";
 import { prisma } from "@/lib/prisma";
 import { serializeOpportunity } from "@/lib/serializeOpportunity";
 
@@ -63,6 +64,7 @@ export default function Home() {
           </Link>
         </div>
         <p className="page-intro">Explore jobs, internships, fellowships, and volunteer opportunities.</p>
+        <DeletedNotice />
         <Suspense fallback={<p className="state-message">Loading opportunities&hellip;</p>}>
           <OpportunityList />
         </Suspense>

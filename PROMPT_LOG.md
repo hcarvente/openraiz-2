@@ -3143,4 +3143,297 @@ None in this test: every check passed on the first and only run, nothing needed 
 - **Proposed commit message:** `Record DELETE endpoint commit and controlled delete test results in prompt log`
 - **Commit message (approved by the user in Part 1 of their next prompt, quoted in full in the Step 5.4 entry):** `Record DELETE endpoint commit and controlled delete test results in prompt log` (no Co-Authored-By trailer). Documentation only.
 - **Pre-commit checks (agent):** only `PROMPT_LOG.md` staged; the staged changes were reviewed; no `.env`, connection string, credential or other sensitive information (scanned); the original OpenRaiz repo unchanged (0 changed files, commit `0113d35`).
-- **Commit reference:** PENDING — the hash is not known until the commit exists; it is recorded in the Step 5.4 entry.
+- **Commit reference:** `4717b8f7cbf5e799b05ddc25b3ba11f9f3400c85` (short `4717b8f`), 1 file changed (`PROMPT_LOG.md`; 64 insertions, 1 deletion); pushed to `origin/main`; `git ls-remote origin main` returned the same hash and the working tree was clean afterwards. Recorded here during Step 5.4.
+
+---
+
+## Milestone 5, Step 5.4 — Delete button with confirmation (built and checked by the agent; user browser test confirmed; commit awaiting the user's approval)
+
+- **Date:** 2026-10-16 (UTC)
+- **Objective:** Add a Delete button with an inline two-step confirmation to the opportunity cards, and a brief "Deleted …" message after the page reloads, using the existing `DELETE /api/opportunities/[id]` endpoint. Build it, verify everything that can be verified **without** creating, changing or deleting any database record, then stop so the **user** can test it in their own browser. The user has since run that browser test and confirmed it (see "User-verified tests"). **Nothing has been committed yet.**
+- **Previous documentation commit:** `4717b8f` (`Record DELETE endpoint commit and controlled delete test results in prompt log`), made at the start of this step as Part 1 of the prompt.
+
+### Exact prompt
+1. ```
+   Here's the updated Prompt 5.4, incorporating your decision to personally test the Delete functionality, just as you did with Edit.
+   The prompt explicitly instructs Claude to build and verify the interface without deleting any records, then stop so you can test it yourself before approving the final commit.
+   PROMPT 5.4 — Build Delete Button With Confirmation (User-Led Testing)
+   Copy and paste everything below into Claude Code:
+   I approve Milestone 5, Step 5.4: Adding the Delete button and confirmation interface to OpenRaiz 2.0.
+   Part 1 — Documentation Commit
+   First, I approve the previously proposed documentation-only commit:
+   Commit message:
+   Record DELETE endpoint commit and controlled delete test results in prompt log
+   Before committing:
+   1. Confirm that only PROMPT_LOG.md is staged.
+   2. Review the staged changes.
+   3. Verify that no database credentials, connection strings, environment files, or other sensitive information are included.
+   4. Confirm the original OpenRaiz repository remains unchanged.
+   If all checks pass, commit and push the documentation update to origin/main.
+   Part 2 — Approved Design Decisions
+   For the Delete interface, follow these decisions:
+   1. Use an inline, two-step confirmation rather than window.confirm().
+   2. Use a muted red outline for the Delete button to visually distinguish this destructive action.
+   3. Show Delete only on opportunity cards when showAdminActions is enabled.
+   4. Perform a real DELETE operation, not an archive.
+   5. After successful deletion, reload the homepage and display a brief success message identifying the deleted opportunity.
+   6. Preserve the original OpenRaiz branding and follow the approved mockup where appropriate.
+   Important: This is for local development only. No authentication or authorization exists yet, so the Delete interface and unrestricted write API must not be deployed publicly.
+   Part 3 — Build the Delete Component
+   Create:
+   components/DeleteOpportunityButton.js
+   This should be a reusable React Client Component.
+   Initial state:
+   - Display a small Delete button.
+   - Include the opportunity title in its accessible name.
+   - Do not send any API request when the button is initially clicked.
+   Confirmation state:
+   When Delete is clicked:
+   - Display a warning identifying the opportunity.
+   - Explain that deletion cannot be undone.
+   - Display two buttons: Yes, delete and Cancel.
+   - Move keyboard focus to Cancel when the confirmation opens.
+   - Allow pressing Escape to cancel.
+   - Do not send a DELETE request until Yes, delete is clicked.
+   During deletion:
+   - Disable confirmation controls while the request is processing.
+   - Prevent duplicate DELETE requests.
+   - Send the request to the existing endpoint:
+   DELETE /api/opportunities/[id]
+   After the request:
+   - HTTP 200: Reload the homepage and display a brief success message identifying the deleted opportunity.
+   - HTTP 404: Explain that the opportunity no longer exists and refresh the list.
+   - Unexpected failure: Display a generic error without exposing internal details.
+   Treat opportunity titles as plain text, never executable HTML.
+   Keep the interface accessible and responsive.
+   Part 4 — Update Opportunity Cards
+   Modify:
+   components/OpportunityCard.js
+   Add the Delete control beside the existing Edit link.
+   Requirements:
+   1. Both Edit and Delete should appear only when showAdminActions is enabled.
+   2. The Delete button's accessible name must include the opportunity title.
+   3. Preserve the existing card layout and information.
+   4. Do not modify existing opportunity data or the way cards retrieve information.
+   Part 5 — Styling
+   Modify:
+   app/globals.css
+   Use:
+   - The existing OpenRaiz color palette and typography.
+   - A muted red for destructive actions.
+   - A clear visual distinction between Edit, Delete, Confirm, and Cancel.
+   - Responsive layouts for desktop and mobile.
+   Do not add new styling libraries or dependencies.
+   Part 6 — Developer Verification (Non-Destructive Only)
+   Before asking me to test, perform all possible non-destructive verification.
+   Check:
+   1. Delete buttons render on the four existing opportunity cards.
+   2. Each button's accessible name includes the correct opportunity title.
+   3. The component contains the correct confirmation and cancellation logic.
+   4. No DELETE request is sent before confirmation.
+   5. Cancel does not trigger a DELETE request.
+   6. Escape cancels the confirmation.
+   7. The DELETE request targets the specific opportunity ID.
+   8. Success, 404, and error handling are implemented.
+   9. The existing Create, Read, and Edit interfaces remain functional.
+   10. Lint and build checks pass.
+   11. No Prisma schema changes or migrations occurred.
+   12. The original OpenRaiz repository remains unchanged.
+   13. All four existing development opportunities remain unchanged.
+   You may use available non-destructive testing capabilities.
+   Do not build a custom browser-testing framework or install new dependencies without my approval.
+   If you cannot verify a particular interaction, clearly identify it as unverified.
+   Do not claim that an interaction passed simply because its code appears correct.
+   Part 7 — User-Led DELETE Verification
+   I will personally test Delete through my browser, just as I tested Edit.
+   After implementing the interface and completing your non-destructive checks, stop and ask me to conduct the browser test.
+   Do not create, modify, or delete any database records during your implementation or automated testing.
+   I will perform the following tests myself:
+   1. Open http://localhost:3000.
+   2. Confirm the existing four opportunities appear.
+   3. Click Add Opportunity.
+   4. Create a clearly fictional opportunity titled:
+      DELETE TEST — Safe to Remove
+   5. Confirm the new opportunity appears on the homepage.
+   6. Click Delete on that specific test opportunity.
+   7. Confirm that the warning and confirmation buttons appear.
+   8. Click Cancel and verify that the opportunity remains.
+   9. Click Delete again.
+   10. Click Yes, delete.
+   11. Confirm that the success message appears.
+   12. Confirm the fictional opportunity disappears from the homepage.
+   13. Refresh the page and confirm the deletion persists.
+   14. Confirm the original four opportunities remain visible.
+   Important safety rules:
+   - I will only delete the new fictional test opportunity.
+   - Do not delete or modify any of the four existing opportunities.
+   - Do not run successful DELETE requests on my behalf.
+   - Do not perform direct SQL changes.
+   - Do not create additional test records.
+   - Do not automatically clean up records.
+   - Do not record any browser test as user-verified until I explicitly confirm its result.
+   If I encounter an issue during testing, help me troubleshoot it before proceeding to the commit.
+   Part 8 — Documentation
+   Update:
+   PROMPT_LOG.md
+   Include:
+   - The exact prompt.
+   - Files created or modified.
+   - Commands executed.
+   - Implementation details.
+   - Non-destructive tests and their actual results.
+   - Any mistakes or corrections.
+   - The previous documentation commit reference.
+   - A clear distinction between Claude-verified tests and user-verified tests.
+   After I personally test the Delete interface, record only the results I explicitly confirm.
+   Part 9 — Git
+   After implementation and verification:
+   1. Show me all modified files.
+   2. Review the proposed changes.
+   3. Propose a descriptive commit message.
+   4. Wait for my approval before committing or pushing.
+   Do not commit or push the Delete interface changes until I have completed my browser testing and explicitly approved the commit.
+   Part 10 — Important Boundaries
+   Do not:
+   - Modify the existing DELETE API endpoint.
+   - Modify the POST, GET, or PATCH endpoints.
+   - Modify Prisma schemas or migrations.
+   - Change validation rules.
+   - Add search or filtering.
+   - Introduce authentication.
+   - Import the original ten opportunities.
+   - Modify the original OpenRaiz repository.
+   - Create, update, or delete database records during your testing.
+   - Commit or push the Delete interface without my approval.
+   Final Instruction
+   Stop after implementing Step 5.4 and completing all non-destructive verification.
+   Give me:
+   1. A summary of what you built.
+   2. The files changed.
+   3. The tests that passed.
+   4. Any tests you could not complete.
+   5. A short browser-testing checklist for me.
+   Wait for my personal browser verification before proceeding.
+   ```
+   (The user's previous message approved committing the Step 5.3A endpoint and running the controlled DELETE test (Step 5.3B); the agent then asked five design questions and proposed a plan, and this prompt is the user's answer.)
+
+### Part 1 — the documentation commit
+Only `PROMPT_LOG.md` was staged; the staged change (64 insertions, 1 deletion; the single removed line was the stale "PENDING" in the Step 5.3A entry it replaces) was reviewed; a scan found no credential, connection string, hostname or `.env` content; the original OpenRaiz repo was unchanged (0 changed files, `0113d35`). **Commit** `4717b8f7cbf5e799b05ddc25b3ba11f9f3400c85` (short `4717b8f`), `Record DELETE endpoint commit and controlled delete test results in prompt log`, pushed to `origin/main` (`git ls-remote` returned the same hash).
+
+### Files created or modified
+- **Created:** `components/DeleteOpportunityButton.js` (the Delete button and its confirmation), `components/DeletedNotice.js` (the note shown after the reload), `lib/deleteFlow.js` (the logic behind both, as plain JavaScript).
+- **Modified:** `components/OpportunityCard.js` (the Delete button beside Edit, both inside one `card-actions` wrapper, only when `showAdminActions` is on), `app/page.js` (two lines: the import and one `<DeletedNotice />` placed under the intro), `app/globals.css` (108 lines added: a muted-red palette entry, the Delete, confirm and note styles, and the card footer layout), `PROMPT_LOG.md`.
+- **Unchanged (proven):** every file the prompt says not to touch is byte-identical to its state at the start of the step (compared by Git object hash): `app/api/opportunities/[id]/route.js` (GET, PATCH and DELETE), `app/api/opportunities/route.js` (list and POST), `lib/validateOpportunity.js`, `lib/validateOpportunityUpdate.js`, `components/OpportunityForm.js`, `lib/opportunityOptions.js` and the edit page; also unchanged: `prisma/` (schema and migration), `package.json`, `package-lock.json`, `lib/serializeOpportunity.js`, `lib/prisma.js`. No new dependency.
+- **Beyond the files the prompt named (deliberate additions):** `lib/deleteFlow.js` and `components/DeletedNotice.js` are new files, and `app/page.js` was modified. They are needed because (a) the "Deleted …" message must survive a page reload and be shown on the homepage, which a button on a card that is about to disappear cannot do, and (b) putting the confirmation steps into a small pure module is what allows them to be tested exhaustively in Node without a browser.
+
+### Implementation details
+- **Confirmation flow (state machine in `lib/deleteFlow.js`, used with `useReducer`):** `idle → (Delete clicked) → confirming → (Yes, delete) → deleting`; from `confirming`, Cancel or Escape goes back to `idle`; a failed request goes from `deleting` back to `confirming` with a generic error; Cancel and Escape are ignored while a request is running. The only way to reach `deleting` is "Yes, delete" from `confirming`.
+- **`components/DeleteOpportunityButton.js`:** `"use client"`. Idle: a small button "Delete" with the muted-red outline and the accessible name `Delete <title>`; clicking it only opens the confirmation. Confirming: an inline panel (a labelled group) saying `Delete “<title>”? This permanently removes the opportunity and cannot be undone.` with two buttons, "Yes, delete" (solid muted red) and "Cancel" (neutral). Keyboard focus moves to Cancel when it opens, Escape (listened for only while it is open) cancels it, and after cancelling focus returns to the Delete button. Deleting: both buttons are disabled, "Yes, delete" shows "Deleting…", and a reference set immediately on click prevents a second request. The request is the only `fetch` in the file, inside one function used only by "Yes, delete": `DELETE /api/opportunities/<encoded id>`. Answer handling: **200** or **404** → the outcome is saved for the next page load and the page is reloaded (`window.location.reload()`); **any other answer, or a network failure** → "Something went wrong, and the opportunity was not deleted. Please try again.", the panel stays open and the buttons are usable again. Titles are only ever shown as React text (never as HTML).
+- **`components/DeletedNotice.js` and the store in `lib/deleteFlow.js`:** just before reloading, the button saves `{ kind, title }` to `sessionStorage` (this tab only). `DeletedNotice` (on the homepage) reads it once through `useSyncExternalStore`, removes it from storage so a later refresh does not show it again, and shows either `Deleted “<title>”.` (200) or `“<title>” no longer exists, so there was nothing to delete. The list has been refreshed.` (404). It is announced politely (`role="status"`), has a Dismiss button, and goes away by itself after 8 seconds. Damaged or blocked storage, an unknown kind, a non-text title all give "no note"; titles are cut to 300 characters.
+- **Styling:** a new muted red `#A63A32` (6.4:1 contrast on white; the approved mockup's Delete button is red, which is not in the original palette, so this is a deliberate, single exception for destructive actions) for the Delete outline, the "Yes, delete" button and the error text; Edit and Cancel stay in the neutral outline style; the confirmation panel is a pale red box with a red left edge that takes a full row under the pills; the "Deleted" note is the existing pale green (neutral for the "already gone" case). The card footer now puts the pills on the left and Edit and Delete together on the right, and wraps on narrow screens.
+- **Lint-driven correction:** the first version reloaded with `window.location.assign("/")`; `npm run lint` warned that Next.js discourages navigating to an internal path that way. Since the cards (and so the button) are on the homepage and the prompt says "reload the homepage", it now uses `window.location.reload()`.
+
+### Commands executed
+- `npm run lint` (several times); `npm run build` (once, after stopping the dev server because both use the `.next` folder; the dev server was restarted afterwards); `npm --prefix <project folder> run dev`; `npx next start -p 3002` (a production build against the real development database, read-only checks only); `pkill` of servers I started
+- Read-only `curl` and Node `fetch` requests (`GET` only, plus one **invalid** `POST` that returns 400 and cannot write)
+- Read-only Node scripts using `pg`: a baseline and a final snapshot of the four records with PostgreSQL's hidden row columns `xmin` (the last transaction that wrote the row) and `ctid` (the row's physical location) plus a content hash, row counts, and write counters
+- Headless Chrome (`--headless=new`, throwaway profiles in the git-ignored `.next/preview/` folder, not the user's profile): `--dump-dom` with console logging, and `--screenshot`
+- The TypeScript compiler already installed in the project, used with `react-dom/server` to render the real components to static HTML in each state (in the git-ignored `.next/preview/rt/`; nothing was installed)
+- `git hash-object` (to prove the protected files are unchanged), `git status`, `git diff`, `npx prisma migrate status`, `npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code`; in the original repo `git status --short`, `git rev-parse --short HEAD` and the file-timestamp fingerprint
+- **No DELETE request of any kind was sent in this step. No record was created, changed or deleted. No direct SQL was run.**
+
+### Verification by the agent (**Claude-verified**; only what actually ran)
+Numbered as in Part 6 of the prompt:
+1. **Delete buttons render on the four existing cards: verified.** In the server HTML, in the hydrated page (headless Chrome, after the page's JavaScript ran) and in a production build, all 4 cards show an Edit link and a Delete button, and none shows a confirmation panel or a "Deleted" note on a normal load.
+2. **Each accessible name includes the correct title: verified.** Each button is named `Delete <that card's title>`, for example `Delete Youth Policy Fellow (Fictional Test Listing)`, matched card by card.
+3. **The component contains the correct confirmation and cancellation logic: verified in two ways.** (a) **Behavior of the logic, observed:** 48 checks (0 failures) on the state machine, the status mapping and the notice store, run in Node. These include an exhaustive check of every state with every action, which shows the only transition into "deleting" is "confirming + confirm", and that "deleting" can only be left by a failure. (b) **Markup, observed:** the real components rendered to HTML in every state: the idle button; the confirmation (names the opportunity, says it cannot be undone, exactly two buttons, "Yes, delete" solid and "Cancel" neutral, a labelled group); the deleting state (both buttons disabled, "Deleting…", busy marker); the failure state (a generic error as an alert, no status code, database or stack text); and the "Deleted" and "already gone" notes (19 checks, 0 failures).
+4. **No DELETE request is sent before confirmation: partly verified.** *Observed:* in the state machine, "Yes, delete" does nothing unless the confirmation is open, and the only route into "deleting" is that one. *Code inspection (the source was read; no browser was observed):* the component has exactly one `fetch`, inside one function used only as the "Yes, delete" handler; the Delete button's click only dispatches "ask". **The actual click behavior in a browser is unverified (see below).**
+5. **Cancel does not trigger a DELETE request: partly verified.** *Observed:* Cancel returns the state machine to idle. *Code inspection:* the cancel function contains no `fetch`. **Unverified in a browser.**
+6. **Escape cancels the confirmation: partly verified.** *Observed:* the "escape" action returns the state machine to idle, and does nothing while a request is running. *Code inspection:* a key listener that only exists while the confirmation is open dispatches that action. **Unverified in a browser.**
+7. **The DELETE request targets the specific opportunity ID: partly verified.** *Code inspection:* the URL is built as `/api/opportunities/` plus the card's own id (URL-encoded) with method `DELETE`. The id passed to each button was shown to be that card's own (each card's Edit link and Delete name match its record). **A real request was deliberately not sent.**
+8. **Success, 404 and error handling are implemented: partly verified.** *Observed:* 200 means "deleted", 404 means "gone", and every other status (400, 401, 403, 405, 409, 429, 500, 502, 503, 0, 201, 204, 301, undefined, null) means a generic failure; the notice store and notes behave as described above; the failure markup is generic. *Code inspection:* the three outcomes are handled as described. **Unverified end to end in a browser.**
+9. **The existing Create, Read and Edit interfaces remain functional: verified (read-only).** The homepage shows the 4 cards with their content; each of the 4 edit pages is still prefilled from the database on every field with a "Save Changes" button; the Add Opportunity page still loads as an empty form with "Save Opportunity"; `GET /api/opportunities` returns 200 with 4 rows; an invalid POST still returns 400. The code behind Create, Edit and the API is byte-identical to before. **No valid POST or any PATCH was sent (that would write), so saving was not re-tested here.**
+10. **Lint and build checks pass:** `npm run lint` reports nothing; `npm run build` compiles successfully. Production-build checks (read-only): 4 cards each with a correctly named Delete button, no confirmation or note on a normal load, the new styles present in the stylesheet, the edit page and Add page return 200, `GET /api/opportunities` returns 200 with 4 rows.
+11. **No Prisma schema changes or migrations:** `npx prisma migrate status` says "Database schema is up to date!"; the live-database-vs-schema comparison returned exit code 0 (no differences); `prisma/migrations/` has only the original migration; `_prisma_migrations` has 1 record; `prisma/` is unchanged.
+12. **The original OpenRaiz repository is unchanged:** 0 changed files, commit `0113d35`, file-timestamp fingerprint matches the Step 1 baseline.
+13. **All four existing development opportunities are unchanged:** a snapshot before any check and one after everything (including the production-build runs) are identical on all four records for `xmin`, `ctid` and content hash (`cmvabung:9236:(0,32):20517ebd`, `cmvadtgq:10244:(0,47):f344d4ed`, `cmvae82z:11265:(0,49):7febb76d`, `cmvafb1l:13377:(0,54):ddec841a`), meaning no transaction wrote to any of them; the table still has 4 rows; PostgreSQL's write counters are the same as at the start (52/25/3).
+- **Additional checks:** browser console messages from the hydrated homepage were only the dev server's "[HMR] connected" and React's "Download the React DevTools" notice (no hydration error, no warning); a title that contains HTML (`<img src=x onerror=alert(1)> & "quotes" <script>alert(2)</script>`) is escaped everywhere it is shown (the button's accessible name, the warning, both notes), and no new file contains `dangerouslySetInnerHTML`, `innerHTML` or `eval`.
+- **Visual review by the agent (not by the user), from headless Chrome screenshots:** the real homepage shows each card with a neutral Edit button and a muted-red-outline Delete button side by side at the bottom right, the rest of the card unchanged; a static preview page built from the real stylesheet and the real components' markup shows the confirmation panel, the "Deleting…" state, the generic error state and both notes, with a clear visual distinction between Edit (neutral outline), Delete (red outline), "Yes, delete" (solid red) and Cancel (neutral); in a 390 px frame the footer wraps (pills, then Edit and Delete) and the panel takes the full width with no overflow. This preview is a **static rendering, not an interactive test**.
+
+### Could NOT be verified by the agent (marked **unverified**; there is no browser-driving tool in this session, I did not build one, and no writes were allowed)
+- Clicking Delete and the confirmation actually appearing in a browser; keyboard focus actually moving to Cancel; Escape actually closing it and focus returning to the Delete button; Cancel actually leaving the record on screen without any request; "Yes, delete" actually sending the DELETE request; the buttons actually disabling while the request runs and a double click sending only one request; the page actually reloading after a 200 or a 404; the "Deleted …" note actually appearing after the reload, disappearing on its own or on Dismiss, and not coming back after a refresh; the error message appearing after a real failure; behavior in a private window with blocked storage; and keyboard-only and screen-reader use. Each of these rests on code that was read and on logic and markup that were tested, but was **not observed running**.
+
+### User-verified tests
+After the agent's report, the user ran the browser test themselves (the checklist below, based on their own 14-step test plan, using only a new fictional opportunity) and wrote: **`Test checklist checked out.`** This is recorded as **user-verified: the Delete interface passed the browser-testing checklist.** The user did not itemize the results, so this entry records only that overall confirmation: it does not claim which individual steps they saw, and the optional "narrow window" step is not recorded as done.
+
+**What the agent could see afterwards (read-only, after the user's message; this corroborates but does not replace the user's own confirmation):** the development database holds 4 opportunities again; the original four are identical to their state at the start of Step 5.4 (same `xmin`, `ctid` and content hash for `cmvabung…`, `cmvadtgq…`, `cmvae82z…` and `cmvafb1l…`), so the user's test did not touch them; no record has "DELETE TEST" or "Safe to Remove" in its title; and PostgreSQL's write counters went from 52/25/3 to 53/25/4, exactly one insert and one delete, which is what creating and then deleting one test record produces (the counters can lag a few seconds). The agent did not create, change or delete anything: the test record was created and deleted by the user through the interface.
+
+The interactions the agent could not observe (listed under "Could NOT be verified by the agent" above) are therefore covered by the user's confirmation of the whole checklist, not by anything the agent saw.
+
+### Browser-testing checklist given to the user
+At http://localhost:3000, using **only** a new fictional test opportunity (never the original four): (1) the four existing opportunities appear, each with Edit and Delete; (2) Add Opportunity: create `DELETE TEST — Safe to Remove` (any fictional values) and confirm it appears; (3) click Delete on that card: a red-edged panel appears with the title, "cannot be undone", "Yes, delete" and "Cancel", and the focus ring is on Cancel; (4) press Escape (the panel closes and the card remains); (5) click Delete again and click Cancel (the panel closes and the card remains); (6) click Delete again, then Yes, delete: the page reloads, a green note says `Deleted “DELETE TEST — Safe to Remove”.`, and the card is gone; (7) refresh: the note does not come back, and the deletion persists; (8) the original four are still there. Optionally: make the window narrow to see the layout on a phone. Every successful Delete is permanent.
+
+### Problems found, errors and corrections
+- **A lint warning, corrected:** `window.location.assign("/")` was flagged by Next.js's lint rule; replaced with `window.location.reload()` (see Implementation details).
+- **A leftover in my first version of the button file:** an unused import and a stray re-export of a constant; removed before the first lint run.
+- **A build wipes the screenshots:** each production build deletes the `.next` folder, including my saved screenshots, so they were taken before the build.
+- **No bug was found in the Delete code by the checks that could be run.** The state-machine tests, the markup tests and the structure assertions all passed on the first run.
+- (Several automated notifications about servers I stopped on purpose were not from the user and required no action.)
+
+### Known limits, stated plainly
+- **No authentication.** The Delete button, `DELETE /api/opportunities/[id]` and the other write endpoints are for local development only and must not be deployed publicly. `showAdminActions` is on for the homepage; it must be removed or restricted to signed-in administrators first.
+- **Deletion is permanent.** It is a real delete (not an archive), as the user decided; there is no undo.
+- **The "Deleted" note is kept in `sessionStorage`**, so it is lost if the browser blocks storage (the deletion still works); it belongs to one tab.
+- **The reload is a full page reload**, so any other unsaved state on the homepage is lost.
+- **A destructive button is next to Edit:** the two-step confirmation (with focus on Cancel and Escape to back out) is the only protection against an accidental click.
+
+### Lessons learned
+- When no browser can be driven, move the logic into plain functions and test every state and action exhaustively; and keep the tests of what was only read (code inspection) clearly separate from what was observed.
+- A static rendering of the real components with the real stylesheet is a good way to review states that cannot be reached without clicking, as long as it is called a preview and not a test.
+- Show only what you can stand behind: "the code looks right" is not "it works".
+
+### Security notes
+The titles shown in the confirmation, the button names and the notes are escaped by React (tested with a hostile title). The component sends only one kind of request (`DELETE` to an id taken from the card) and shows only generic error text. No credential, connection string or hostname appears in the code, the test output or this log (scanned).
+
+### Follow-up prompt
+2. ```
+   Test checklist checked out.
+   ```
+   → The agent recorded the user's confirmation above and read the database (read-only) to see what the user's test left behind. The user's prompt for this step said not to commit the Delete interface until they had finished testing **and explicitly approved the commit**; this message confirms the test but does not approve the commit, so the agent asked for the approval and did not commit.
+
+3. ```
+   I explicitly approve committing and pushing the Step 5.4 Delete interface to origin/main.
+   Approved commit message:
+   Add Delete button with inline confirmation and success note
+   Approved files:
+   - components/DeleteOpportunityButton.js
+   - components/DeletedNotice.js
+   - lib/deleteFlow.js
+   - components/OpportunityCard.js
+   - app/page.js
+   - app/globals.css
+   - PROMPT_LOG.md
+   Before committing:
+   1. Verify that only these seven files are staged.
+   2. Review the staged diff.
+   3. Confirm no credentials, environment files, or generated files are included.
+   4. Confirm lint and build checks pass.
+   5. Confirm all four existing development opportunities remain unchanged.
+   6. Confirm the original OpenRaiz repository remains unchanged.
+   If all checks pass, commit and push to origin/main.
+   Provide the commit hash and confirm the push succeeded.
+   Documentation: Preserve my browser confirmation exactly as reported. Do not claim I individually verified interactions I didn't specifically describe.
+   Next milestone: After committing, prepare a brief plan for Milestone 6:
+   - Search opportunities by title or organization.
+   - Filter opportunities by category.
+   - Make final design refinements based on our approved mockup.
+   Do not implement Milestone 6 yet.
+   Stop after presenting the plan and wait for my approval.
+   ```
+   → The explicit commit approval the previous message was waiting for. The agent ran the pre-commit checks below and committed and pushed. The user's browser confirmation is preserved exactly as the user reported it (`Test checklist checked out.`, recorded under "User-verified tests"); the user did not describe individual interactions, so none is recorded as individually verified.
+
+### Git
+- **Files committed (seven, approved by the user):** `components/DeleteOpportunityButton.js`, `components/DeletedNotice.js`, `lib/deleteFlow.js`, `components/OpportunityCard.js`, `app/page.js`, `app/globals.css` and `PROMPT_LOG.md`.
+- **Commit message (approved):** `Add Delete button with inline confirmation and success note` (no Co-Authored-By trailer).
+- **Pre-commit checks (agent):** exactly those seven files staged; the staged diff reviewed; no `.env`, generated, build, package, binary or SQL files, and no credential, connection string or hostname in the staged diff (scanned); `npm run lint` and `npm run build` pass; the four existing development opportunities are unchanged (same `xmin`, `ctid` and content hash as at the start of Step 5.4); the original OpenRaiz repo unchanged (0 changed files, commit `0113d35`).
+- **Commit reference:** PENDING — the hash is not known until the commit exists; to be recorded in a later log update.

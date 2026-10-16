@@ -6,9 +6,10 @@
 // with calendar dates as "YYYY-MM-DD" strings. `today` is also "YYYY-MM-DD"; it is passed
 // in (not read from the clock here) so the card always renders the same output for the same props.
 //
-// `showAdminActions` adds an Edit link. There is no sign-in yet, so it is off by default; the homepage turns
-// it on for the local development demo. Leave it off (or guard it) wherever the cards are shown to the public.
+// `showAdminActions` adds the Edit link and the Delete button. There is no sign-in yet, so it is off by default; the
+// homepage turns it on for the local development demo. Leave it off (or guard it) wherever the cards are shown to the public.
 import Link from "next/link";
+import DeleteOpportunityButton from "@/components/DeleteOpportunityButton";
 
 const TYPE_LABELS = { job: "Job", internship: "Internship", fellowship: "Fellowship", volunteer: "Volunteer" };
 const STATUS_LABELS = { active: "Active", filled: "Filled", archived: "Archived" };
@@ -118,13 +119,16 @@ export default function OpportunityCard({ opportunity, today, showAdminActions =
           <li className="pill pill-relevance">Lived experience: {relevanceLabel}</li>
         </ul>
         {showAdminActions ? (
-          <Link
-            className="button button-secondary button-small"
-            href={`/admin/opportunities/${opportunity.id}/edit`}
-            aria-label={`Edit ${opportunity.title}`}
-          >
-            Edit
-          </Link>
+          <div className="card-actions">
+            <Link
+              className="button button-secondary button-small"
+              href={`/admin/opportunities/${opportunity.id}/edit`}
+              aria-label={`Edit ${opportunity.title}`}
+            >
+              Edit
+            </Link>
+            <DeleteOpportunityButton opportunityId={opportunity.id} title={opportunity.title} />
+          </div>
         ) : null}
       </div>
     </article>
