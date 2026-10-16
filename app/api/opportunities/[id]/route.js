@@ -1,9 +1,10 @@
-// GET   /api/opportunities/[id]: returns one opportunity as flat JSON, or 404 if there is none.
-// PATCH /api/opportunities/[id]: changes only the fields named in the JSON body and returns the updated opportunity.
+// GET    /api/opportunities/[id]: returns one opportunity as flat JSON, or 404 if there is none.
+// PATCH  /api/opportunities/[id]: changes only the fields named in the JSON body and returns the updated opportunity.
+// DELETE /api/opportunities/[id]: permanently removes the opportunity and returns { id, deleted: true }, or 404 if there is none.
 // The [id] in the folder name is a dynamic segment: for /api/opportunities/abc123 the id is "abc123".
 // All database access and validation happen here on the server.
 //
-// SECURITY: there is no authentication yet, so PATCH is for LOCAL DEVELOPMENT ONLY.
+// SECURITY: there is no authentication yet, so PATCH and DELETE are for LOCAL DEVELOPMENT ONLY.
 // Do not deploy this route publicly until sign-in and authorization checks exist.
 import { prisma } from "@/lib/prisma";
 import { serializeOpportunity } from "@/lib/serializeOpportunity";
@@ -77,5 +78,32 @@ export async function PATCH(request, { params }) {
     }
     console.error("PATCH /api/opportunities/[id] failed:", error?.name, error?.code);
     return Response.json({ error: "Could not update the opportunity." }, { status: 500 });
+  }
+}
+
+export async function DELETE(_request, { params }) {
+  const { id } = await params;
+
+  if (!VALID_ID.test(id)) {
+    return Response.json({ error: "Opportunity not found." }, { status: 404 });
+  }
+
+  try {
+    // 1. The opportunity must exist (404 if not).
+    const existing = await prisma.opportunity.findUnique({ where: { id }, select: { id: true } });
+    if (!existing) {
+      return Response.json({ error: "Opportunity not found." }, { status: 404 });
+    }
+
+    // 2. Delete exactly that one record (the where clause names its id and nothing else).
+    const deleted = await prisma.opportunity.delete({ where: { id }, select: { id: true } });
+    return Response.json({ id: deleted.id, deleted: true });
+  } catch (error) {
+    // The opportunity was deleted by someone else between the lookup and the delete: it is gone either way.
+    if (error?.code === "P2025") {
+      return Response.json({ error: "Opportunity not found." }, { status: 404 });
+    }
+    console.error("DELETE /api/opportunities/[id] failed:", error?.name, error?.code);
+    return Response.json({ error: "Could not delete the opportunity." }, { status: 500 });
   }
 }

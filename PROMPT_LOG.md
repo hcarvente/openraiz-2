@@ -2886,4 +2886,198 @@ The Edit interface and `PATCH /api/opportunities/[id]` have no authentication an
 - **Files committed:** `app/admin/opportunities/[id]/edit/page.js`, `app/admin/opportunities/[id]/edit/not-found.js`, `components/OpportunityForm.js`, `components/OpportunityCard.js`, `lib/opportunityOptions.js`, `app/page.js`, `app/globals.css` and `PROMPT_LOG.md`.
 - **Commit message (the one the agent proposed, which the user approved by saying "commit and push it"):** `Add Edit Opportunity page and Edit links using PATCH with changed fields only` (no Co-Authored-By trailer).
 - **Pre-commit checks (agent):** exactly those eight files staged; no `.env`, generated, build, package, binary or SQL files staged; a scan of the staged diff found no credential, hostname or endpoint parts; `npm run lint` passes; the last production build ran after the last code change (the move of `params` inside `<Suspense>`) and compiled successfully; the original OpenRaiz repo unchanged (0 changed files, commit `0113d35`). No database record was changed by the agent.
-- **Commit reference:** PENDING — the hash is not known until the commit exists; to be recorded in a later log update.
+- **Commit reference:** `a803e07040716925b8ba0e67fdd27fff35dffd9c` (short `a803e07`), 8 files changed (525 insertions, 26 deletions); pushed to `origin/main`; `git ls-remote origin main` returned the same hash, the remote tree lists the new edit page, `not-found.js`, `OpportunityForm.js` and `opportunityOptions.js`, and the working tree was clean afterwards. Recorded here during Step 5.3A.
+
+---
+
+## Milestone 5, Step 5.3A — DELETE /api/opportunities/[id] (handler only; no successful delete yet)
+
+- **Date:** 2026-10-16 (UTC)
+- **Objective:** Add `DELETE /api/opportunities/[id]` so an opportunity can be removed from the Neon development database, test it **without performing a successful delete**, and propose a plan for a separate, clearly fictional DELETE-test record that the user must approve before anything is created or deleted. No Delete buttons, no frontend changes, no search or filters, no schema change, and **no database record created, changed or deleted.**
+- **Previous commit:** `a803e07` (`Add Edit Opportunity page and Edit links using PATCH with changed fields only`).
+
+### Exact prompt
+1. ```
+   I approve Step 5.3A: Building the DELETE endpoint for OpenRaiz 2.0.
+   Objective
+   Implement DELETE /api/opportunities/[id] to allow opportunities to be removed from our Neon development database.
+   Step 1 — Implementation
+   Extend:
+   app/api/opportunities/[id]/route.js
+   Add a DELETE handler that:
+   1. Accepts an opportunity ID from the URL.
+   2. Checks that the opportunity exists.
+   3. Returns HTTP 404 if the ID does not exist.
+   4. Deletes the selected opportunity using Prisma.
+   5. Returns HTTP 200 with a simple success response containing the deleted opportunity's ID.
+   6. Returns a generic HTTP 500 for unexpected failures.
+   Handle the possibility that a record disappears between checking its existence and attempting deletion.
+   Keep the existing GET and PATCH handlers unchanged.
+   Step 2 — Safety
+   This endpoint is intended for local development only.
+   We do not have authentication or authorization yet.
+   Do not deploy unrestricted DELETE functionality publicly.
+   Do not introduce a database schema change.
+   Step 3 — Testing
+   Perform read-only and non-destructive tests first:
+   1. Confirm nonexistent IDs return HTTP 404.
+   2. Confirm malformed IDs are handled safely.
+   3. Confirm unexpected database failures return a generic HTTP 500.
+   4. Confirm existing GET, POST, and PATCH functionality remains intact.
+   5. Confirm all four existing development records remain unchanged.
+   Important: Do not run a successful DELETE request yet.
+   Once the implementation passes the non-destructive tests, propose a plan to create one new, clearly fictional opportunity specifically for DELETE testing.
+   Show me the planned test record and explain how you will verify its creation and deletion.
+   Wait for my explicit approval before creating or deleting that record.
+   Do not delete or modify any of the existing four opportunities.
+   Step 4 — Verification
+   Run lint and build checks.
+   Confirm the Prisma schema and migrations are unchanged.
+   Confirm no credentials or connection strings are exposed.
+   Confirm the original OpenRaiz repository remains unchanged.
+   Step 5 — Documentation
+   Update PROMPT_LOG.md with:
+   - This exact prompt.
+   - Files modified.
+   - Commands executed.
+   - Actual test results.
+   - Any mistakes or corrections.
+   - The previous commit reference a803e07.
+   Step 6 — Git
+   Propose a commit message and show me the modified files.
+   Do not commit or push without my approval.
+   Important boundaries
+   Do not add Delete buttons to the frontend yet.
+   Do not create or delete database records without separate approval.
+   Do not add search or filters.
+   Do not modify the existing OpenRaiz repository.
+   Stop after completing Step 5.3A and present your results.
+   ```
+   (The user's message before this one was `Edit flow works, commit and push it`, carried out as commit `a803e07`; the agent then asked whether to plan DELETE, and this prompt is the user's answer.)
+
+### Files created or modified
+- **Modified:** `app/api/opportunities/[id]/route.js` (added the `DELETE` handler, 31 lines added and 3 comment lines rewritten at the top of the file to mention DELETE), `PROMPT_LOG.md` (this entry and the `a803e07` reference).
+- **Proven unchanged:** the `GET` and `PATCH` handlers are byte-for-byte identical to before (their source text has the same SHA-256 fingerprint before and after: GET `b56123ce44950b7d`, PATCH `668b7ff7259b9409`). Also unchanged (verified with `git diff --quiet`): `app/api/opportunities/route.js` (list and POST), all of `lib/`, all of `components/`, `app/page.js`, `app/globals.css`, the admin pages, `prisma/` (schema and migration), `package.json`, `package-lock.json`. No frontend change, no Delete button, no new dependency.
+
+### What the DELETE handler does
+`DELETE /api/opportunities/[id]`: reads the id from the URL (`await params`, as this Next.js version requires); an id that cannot exist (anything other than letters, digits, hyphens and underscores, or longer than 100 characters; the same rule as GET and PATCH) gets a generic `404 {"error":"Opportunity not found."}` without touching the database; otherwise it looks the opportunity up with `prisma.opportunity.findUnique` (selecting only its id) and answers 404 if there is none; otherwise it calls `prisma.opportunity.delete({ where: { id } })`, where the `where` clause names only that one id, and returns `200 {"id": "<the deleted id>", "deleted": true}`. If Prisma reports `P2025` (the record vanished between the lookup and the delete, for example because someone else deleted it), the handler answers 404, because the record is gone either way. Any other error is logged on the server as its name and code only and answered with `500 {"error":"Could not delete the opportunity."}`. The handler's only database calls are `findUnique` and `delete`. The comment at the top of the file now says that PATCH and DELETE are for local development only because there is no authentication yet.
+
+### Commands executed
+- `npm run lint` (several times); `npm run build` (once, after stopping the dev server because both use the `.next` folder); `npm --prefix <project folder> run dev` (background dev server, restarted after the build)
+- A script (inline Node) that fingerprinted the source text of the `GET` and `PATCH` handlers before and after the change
+- Non-destructive test scripts using Node `fetch` and `pg`, with a **built-in safety rule: before sending any DELETE the script checks the target against the real ids in the database (exact match, after URL-decoding, and after trimming) and refuses to send it if it matches.** The rule refused the probe "real id plus a trailing space" on the first run (see Problems) and was exercised again on purpose in the second run.
+- `DATABASE_URL="postgresql://nobody:notarealpassword@127.0.0.1:1/nodb" npx next start -p 3001` (a production build pointed at a **fake, unreachable** address, to test the 500 response; no real credential involved; the id used was a nonexistent one, so nothing could have been deleted even by mistake) and `npx next start -p 3002` (the production build against the real development database, with nonexistent ids only); `pkill` of the servers I started
+- Read-only snapshots of the four records using PostgreSQL's hidden row columns `xmin` (the last transaction that wrote the row), `ctid` (the row's physical location) and a content hash, plus the write counters
+- `npx prisma migrate status`, `npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code`; `git status`, `git diff --quiet`, `git diff --stat`; in the original repo `git status --short`, `git rev-parse --short HEAD` and the file-timestamp fingerprint
+- **No successful DELETE request was sent. No record was created, changed or deleted.** (Every DELETE sent was to an id that does not exist, or to an impossible id, or to the unreachable fake database.)
+
+### Test results (only what actually ran)
+**Non-destructive tests on the development server against the real development database: 36 checks, 0 failures.**
+1. **Nonexistent ids return 404:** `DELETE` for a well-formed nonexistent id, plain text (`does-not-exist`), the old readable id style (`2026-community-health-fellow-001`, since `legacyId` is not the id), a real id changed to UPPER case, a real id with its last character changed, a single character and a 100-character id each returned HTTP 404 with exactly `{"error":"Opportunity not found."}`, which does not repeat the id.
+2. **Malformed ids are handled safely:** a null byte, a null byte inside a real id, a real id followed by a semicolon, a real id followed by a SQL comment, SQL-looking text (`'; DROP TABLE "Opportunity"; --`), `x' OR '1'='1`, path traversal, a wildcard character, unicode, 101 characters and 5,000 characters each returned the same generic 404, with no database or SQL text in the response. A request with broken percent-encoding (`%ZZ%`) is answered by Next.js itself with HTTP 400 before the route runs (framework behavior, unchanged).
+3. **Unexpected database failures return a generic 500:** with the fake unreachable database, `DELETE` (well-formed id) returned HTTP 500 with exactly `{"error":"Could not delete the opportunity."}`; none of eleven sensitive strings (the fake password, the fake user, `127.0.0.1`, `postgresql`, the fake database name, `ECONNREFUSED`, `P1001`, `prisma`, `SELECT`, the requested id, `DROP`) appeared in it; the server console logged only `DELETE /api/opportunities/[id] failed: PrismaClientKnownRequestError P1001`. An impossible id in the same situation still returned 404 without touching the database, and `GET` returned 500 as before.
+4. **Existing GET, POST and PATCH are intact:** `GET /api/opportunities` returned 200 with 4 rows; `GET /api/opportunities/<id>` returned 200 with all 21 fields for each of the four records; `POST` with an **invalid** body returned 400 with 11 field errors (no valid POST was sent, because it would create a row); `PATCH` to the PATCH test record with four **invalid** bodies (an empty body, a protected field, a bad enum, a bad status) returned 400 and `PATCH` to a nonexistent id returned 404 (none of these can write). `OPTIONS` now reports `Allow: DELETE, GET, HEAD, OPTIONS, PATCH`; `POST` and `PUT` on `/[id]` still return 405. The `GET` and `PATCH` handlers are byte-identical to before (see above).
+5. **The four existing records remain unchanged:** a snapshot taken before any test and one taken after everything (including the production-build runs) are identical for all four records on `xmin`, `ctid` and content hash, so no transaction wrote to any of them; the table still has exactly 4 rows; PostgreSQL's write counters are the same as at the start of the step (51 inserts, 25 updates, 2 deletes). (The PATCH test record is in the state the user's own Edit test left it: a remote internship; it was not changed in this step.)
+- **Production build, real development database, nonexistent ids only:** `DELETE` for a nonexistent id, an UPPER-case copy of a real id, a null byte, SQL-looking text and a 5,000-character id all returned 404; `GET` one and `GET` list returned 200; `OPTIONS` listed DELETE; and again no record changed.
+- **Lint and build:** `npm run lint` passes with no warnings; `npm run build` compiles successfully and lists `ƒ /api/opportunities/[id]` among the routes.
+- **Schema and migrations:** `npx prisma migrate status` says "Database schema is up to date!"; the live-database-vs-schema comparison returned exit code 0 (no differences); `prisma/migrations/` has only the original migration; `_prisma_migrations` has 1 record.
+- **Credentials:** all output was filtered; no connection string, password or hostname appears in any test output or in this log (scanned).
+- **Original OpenRaiz repo:** 0 changed files, commit `0113d35`, file-timestamp fingerprint matches the Step 1 baseline.
+- **Not tested, because it needs a record to be deleted:** a successful delete (HTTP 200 with the deleted id), the record really disappearing, a second DELETE of the same id returning 404, and the real "record vanished between the lookup and the delete" path (the `P2025` branch). These are covered by the proposed plan below, which needs the user's approval.
+
+### Proposed plan for the DELETE test (awaiting the user's explicit approval; nothing in it has been done)
+**Planned test record** (created through the existing `POST /api/opportunities`, with fictional data only):
+```
+title:                    "DELETE Test Opportunity (Fictional - safe to delete)"
+organization:             "Fictional DELETE Testing Org"
+description:              "Fictional record created only to test the DELETE endpoint. It will be deleted right after. Not a real opportunity."
+type:                     "volunteer"
+livedExperienceRelevance: "relevant"
+status:                   "active"
+locationType:             "remote"   (so no city, state or address)
+isPaid:                   false
+compensation:             "Unpaid"
+datePosted:               "2026-10-16"
+(no deadline: a rolling opportunity)
+applyMethodType:          "email"
+applyMethodValue:         "delete-test@example.org"
+```
+**Exactly what would change in the database:** one insert (the POST) and one delete (the DELETE), both of this one new record, and nothing else; no direct SQL; the four existing records are never sent any request that can change them. Net effect: the table goes 4 rows, 5 rows, 4 rows again; the write counters would go from 51/25/2 to 52/25/3 (they can lag a few seconds).
+**How its creation would be verified:** the POST returns HTTP 201 with a new id; `GET /api/opportunities/<new id>` returns 200 and the same JSON; a direct read of the database shows 5 rows and the new row's stored values match what was submitted; `GET /api/opportunities` returns 5 rows; and the four existing records are unchanged (same `xmin`, `ctid` and content hash as the baseline taken just before).
+**How its deletion would be verified:** before the DELETE, a script reads the new row and refuses to continue unless its id is the one the POST returned **and** its title and organization are exactly the planned ones **and** its `legacyId` is empty; then exactly one `DELETE /api/opportunities/<that id>` is sent, expecting HTTP 200 and `{"id":"<that id>","deleted":true}`; afterwards `GET /api/opportunities/<that id>` must return 404, the table must be back to exactly 4 rows with none of the new record's data left, `GET /api/opportunities` must return 4 rows, the homepage must show 4 cards, the four original records must still be identical to the baseline (`xmin`, `ctid`, content hash), and a **second** DELETE of the same (now nonexistent) id must return 404, which is harmless because that row no longer exists.
+**If anything unexpected happens:** the agent stops and reports, and does nothing further without the user's approval; in particular, if the POST does not return 201, or the DELETE does not return 200, or any of the four original records differs from the baseline, it will not retry or clean up with direct SQL. If the test record were left behind, the agent would ask before removing it.
+
+### Problems found, errors and corrections
+- **My own safety rule refused a probe on its first run.** I had included "a real id followed by a trailing space" as a malformed-id probe for DELETE; the script's rule (which trims before comparing) refused to send it, and the script stopped with an error, correctly. Nothing was sent for that probe; the 9 DELETE requests sent before it were all clean 404s with no writes. In practice that probe would have been a harmless 404 (spaces fail the route's id check), but I judged the stricter rule right, removed that one probe and re-ran the whole set from the start (the final result of 36 checks is from that second run). The "trailing space" case was also checked on purpose in the second run only to confirm that the rule refuses it.
+- No bug was found in the DELETE code by these tests.
+- (Several automated notifications about servers I stopped on purpose were not from the user and required no action.)
+
+### Known limits, stated plainly
+- **No authentication.** `DELETE` (like PATCH and POST) is for local development only and must not be deployed publicly. A successful DELETE is permanent: there is no undo and no soft delete (an `archived` status exists, but this endpoint removes the row for good).
+- **No confirmation at the API level.** Any request that names a real id deletes it. A confirmation step belongs in the future Delete button (a later step), not in this endpoint.
+- The "vanished between lookup and delete" branch is written but has not been exercised.
+
+### Lessons learned
+- Build the safety into the test itself (a rule that refuses to send a destructive request to a real id) instead of relying on being careful.
+- A destructive endpoint can be tested thoroughly without a successful delete: missing ids, malformed ids, an unreachable database, and proof (`xmin`, `ctid`, content hash) that nothing changed.
+
+### Security notes
+The endpoint's only database calls are a lookup by id and a delete by that same id; responses never repeat the requested id on a 404, and errors are generic sentences. No credentials or connection strings appear anywhere in the code, output or this log.
+
+### Follow-up prompt (approval to commit, and to run the controlled DELETE test)
+2. ```
+   I approve committing Step 5.3A and running your proposed controlled DELETE test.
+   Part 1 — Commit the endpoint
+   Approved files:
+   - app/api/opportunities/[id]/route.js
+   - PROMPT_LOG.md
+   Approved commit message:
+   Add DELETE /api/opportunities/[id] endpoint
+   Before committing, verify that only these two files are staged, the staged diff contains no credentials or unexpected changes, and the original OpenRaiz repository remains unchanged.
+   If those checks pass, commit and push to origin/main.
+   Part 2 — Controlled DELETE test
+   I explicitly approve creating and deleting one fictional opportunity with the following exact identity:
+   - Title: DELETE Test Opportunity (Fictional - safe to delete)
+   - Organization: Fictional DELETE Testing Org
+   - Purpose: Testing the DELETE endpoint only.
+   Use the remaining fields and values from your proposed test plan.
+   Testing requirements
+   1. Confirm the database initially contains exactly four opportunities.
+   2. Record fingerprints of those four opportunities.
+   3. Create exactly one new fictional opportunity using POST.
+   4. Confirm POST returns HTTP 201.
+   5. Confirm GET retrieves the newly created record.
+   6. Confirm the database contains five opportunities.
+   7. Verify the test record's ID, title, organization, and other identifying values before deleting it.
+   8. Send exactly one successful DELETE request targeting that test record.
+   9. Confirm DELETE returns HTTP 200 with the expected ID.
+   10. Confirm GET for that ID returns HTTP 404.
+   11. Confirm a second DELETE request for that same ID returns HTTP 404.
+   12. Confirm the database contains exactly four opportunities afterward.
+   13. Confirm the four existing opportunities remain unchanged.
+   14. Confirm the homepage still displays those four opportunities.
+   Safety boundaries
+   - Do not delete or modify any of the original four records.
+   - Do not use direct SQL to create or delete the test record.
+   - Do not perform additional successful DELETE requests.
+   - Do not retry unexpected failures automatically.
+   - If the test record remains after a failure, stop and ask me before attempting cleanup.
+   - Use only the Neon development branch.
+   Documentation
+   Update PROMPT_LOG.md with the actual test results, including any errors or corrections.
+   Record the Step 5.3A commit hash.
+   Git
+   After testing, propose a documentation-only commit for the results.
+   Do not commit or push that second documentation update without my approval.
+   Next step
+   Once the DELETE test passes, prepare a brief plan for Step 5.4: Adding a Delete button with confirmation to the opportunity interface.
+   Do not implement the Delete button yet.
+   Stop after reporting the test results and the Step 5.4 plan.
+   ```
+   → The agent ran the Part 1 pre-commit checks below and committed and pushed; the Part 2 controlled DELETE test and its results follow in the next entry ("Step 5.3B").
+
+### Git
+- **Files committed:** `app/api/opportunities/[id]/route.js` and `PROMPT_LOG.md`.
+- **Commit message (approved):** `Add DELETE /api/opportunities/[id] endpoint` (no Co-Authored-By trailer).
+- **Pre-commit checks (agent):** exactly those two files staged; no `.env`, generated, build, package, binary or SQL files; a scan of the staged diff found no credential, hostname or endpoint parts, and the route diff contains only the new `DELETE` handler and the rewritten header comment (the `GET` and `PATCH` handlers are unchanged); `npm run lint` and `npm run build` had passed; the original OpenRaiz repo unchanged (0 changed files, commit `0113d35`).
+- **Commit reference:** PENDING — the hash is not known until the commit exists; to be recorded in a later log update (it is recorded in the Step 5.3B entry).
