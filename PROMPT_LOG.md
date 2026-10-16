@@ -992,5 +992,8 @@ This step affects the **database design** only: no frontend, API routes or table
 - Removed the stray `/tmp` copy.
 
 ### Git
-- **Commit message:** PENDING — nothing committed; awaiting the user's approval.
-- **Commit reference:** PENDING.
+- **Commit message:** `Define Opportunity model and enums in Prisma schema` (no Co-Authored-By trailer)
+- **Pre-commit checks (agent):** only `prisma/schema.prisma` and `PROMPT_LOG.md` were staged; no `.env`, generated Prisma files or mockup staged (`design-reference/` left untracked at the user's request); the staged schema diff added 62 lines and removed 1 (the obsolete "No models yet" comment); a scan of the staged diff found no part of the real credentials.
+- **Commit reference:** `a733f031f99894dd58a9fd75b6fe29423c066668` (short `a733f03`), 2 files changed; pushed to `origin/main`. `git ls-remote origin main` returned the same hash, and `git status` showed only the untracked `design-reference/`.
+- **Follow-up prompt:** the user approved a documentation-only commit with the message `Record Opportunity model commit in prompt log` (the first part of their next message, quoted in full under Step 2.6A).
+- **Second commit:** `Record Opportunity model commit in prompt log` (log-only; its hash is visible in `git log`).
