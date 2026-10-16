@@ -1173,4 +1173,115 @@ None.
 - **Commit message:** `Record migration preparation and development branch setup in prompt log` (no Co-Authored-By trailer); documentation-only, includes the Step 2.6A and Step 2.6B entries.
 - **Follow-up prompt:** `Yes, commit and push the documentation update`.
 - **Pre-commit checks (agent):** only `PROMPT_LOG.md` staged; `.env` and `design-reference/` not staged; a scan of the staged diff found no credential, hostname or endpoint parts.
-- **Commit reference:** PENDING — the hash is not known until the commit exists; to be recorded in a later log update.
+- **Commit reference:** `bd29c859562d4dd13ec79692e1f1296044269654` (short `bd29c85`), 1 file changed (`PROMPT_LOG.md`, 177 lines added); pushed to `origin/main`; `git ls-remote origin main` returned the same hash. Recorded here during Step 2.6C at the user's request.
+
+---
+
+## Milestone 2, Step 2.6C — Generate the initial migration file (not applied)
+
+- **Date:** 2026-10-15
+- **Objective:** Generate and review the SQL migration that will create the `Opportunity` table and its five enum types on the Neon `development` branch, **without applying it**.
+- **Previous documentation commit:** `bd29c85` (`Record migration preparation and development branch setup in prompt log`).
+
+### Exact prompts
+1. ```
+   I approve generating the initial Prisma migration file for OpenRaiz 2.0.
+   Objective
+   Generate the SQL migration that will eventually create our Opportunity table in the Neon development database.
+   This step is for generating and reviewing the migration, not applying it.
+   Pre-flight verification
+   Before generating the migration:
+   1. Confirm DATABASE_URL and DIRECT_URL still reference the Neon development database.
+   2. Confirm the development database has zero application tables and zero custom enum types.
+   3. Run npx prisma validate.
+   4. Confirm the Git working tree contains no unexpected changes.
+   5. Confirm .env remains excluded from Git.
+   Migration generation
+   Run:
+   npx prisma migrate dev --create-only --name init
+   Before running it, confirm that this command is supported by our installed Prisma version.
+   If the command would reset the database, require destructive confirmation, or target an unexpected database, stop and ask for approval.
+   Migration review
+   After generating the migration:
+   1. Identify all generated files.
+   2. Show me the complete SQL migration.
+   3. Confirm that it creates the five approved enum types.
+   4. Confirm that it creates the Opportunity table with all 21 columns.
+   5. Confirm the unique constraint on legacyId.
+   6. Confirm that all required and optional fields match our approved schema.
+   7. Confirm that createdAt and lastUpdated are configured as expected.
+   8. Confirm that no existing application tables or data are being deleted or modified.
+   9. Check whether the command created any Prisma migration bookkeeping objects.
+   Important
+   Do not apply the migration to create the Opportunity table.
+   Do not run prisma migrate dev without --create-only.
+   Do not run prisma migrate deploy.
+   Do not reset the database.
+   Do not import opportunities.
+   Do not modify frontend components or API routes.
+   Documentation
+   Update PROMPT_LOG.md with:
+   - The exact prompt.
+   - Commands executed.
+   - Files created or modified.
+   - Migration verification results.
+   - Any problems or corrections.
+   - The previous documentation commit reference bd29c85.
+   Do not include credentials or connection strings.
+   Git
+   After reviewing the migration, propose a commit message.
+   Do not commit or push without my approval.
+   Stop after generating and reviewing the SQL migration.
+   Wait for my approval before applying it to Neon.
+   ```
+   (The user's message before this one was the approval of the documentation commit `bd29c85`, "Yes, commit and push the documentation update"; the agent's plan for this step was given in chat.)
+
+### Pre-flight results (all ran before the migration command)
+- **Development database:** both strings still reference the development endpoint (the short non-reversible fingerprint matches the one recorded in Step 2.6B) and neither references production.
+- **Empty:** 0 application tables (this count also covers any `_prisma_migrations` table) and 0 custom enum types. The branch had the databases `neondb` and `postgres`. The database role is allowed to create databases, which the temporary shadow database needs.
+- **`npx prisma validate`:** the schema is valid.
+- **Command supported:** `npx prisma migrate dev --help` lists `--name` and `--create-only` ("Create a new migration but do not apply it") for the installed Prisma 7.10.0, and no reset or force option applies to this command line. The database was empty and had no migration history, so no reset prompt was expected. The command ran with no input available (`< /dev/null`) so any confirmation prompt would have failed instead of proceeding.
+- **Git:** only the approved untracked `design-reference/` folder; HEAD was `bd29c85`. `.env` is excluded (`.gitignore:34 .env*`).
+
+### Commands executed
+- `npx prisma validate`, `npx prisma migrate dev --help`, `npx prisma --version`
+- Inline Node scripts (no files written) using `pg` with read-only queries, output filtered to hide URLs and hostnames: the pre-flight checks above, and a post-command check of tables, enum types, `_prisma_migrations` and the list of databases
+- **`npx prisma migrate dev --create-only --name init`** (the one migration command run; never run without `--create-only`)
+- `cat` of the generated files; `npx prisma migrate diff --from-empty --to-schema prisma/schema.prisma --script` (offline) to compare with the generated SQL; an inline script reviewing the SQL against `schema.prisma`
+- `git status --short`; in the original repo, `git status --short` and `git rev-parse --short HEAD`
+No `prisma migrate deploy`, no reset, no migration applied.
+
+### Files created
+- `prisma/migrations/20261016011916_init/migration.sql` (44 lines): the SQL that will create the enums, table and index. The folder name uses a UTC timestamp, 2026-10-16 01:19:16 UTC.
+- `prisma/migrations/migration_lock.toml`: a Prisma file recording the database provider (`postgresql`); Prisma says it should be committed.
+No existing file was modified by the command. (This log entry modifies `PROMPT_LOG.md`.)
+
+### Migration verification results (the SQL file was reviewed; it has not been run on any database)
+1. **Five enum types:** `OpportunityType` (job, internship, fellowship, volunteer), `LivedExperienceRelevance` (required, preferred, welcomed, relevant), `OpportunityStatus` (active, filled, archived), `LocationType` (remote, hybrid, onsite), `ApplyMethodType` (url, email), each exactly matching the approved schema.
+2. **Table and columns:** `CREATE TABLE "Opportunity"` with 21 columns (matching the 21 model fields) and a primary key on `id`.
+3. **Unique constraint:** `CREATE UNIQUE INDEX "Opportunity_legacyId_key" ON "Opportunity"("legacyId")`; `legacyId` is nullable.
+4. **Required vs optional:** 16 NOT NULL columns and 5 nullable ones (`legacyId`, `city`, `state`, `address`, `deadline`), matching the schema.
+5. **`createdAt`:** `TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP`, so the database fills it in.
+6. **`lastUpdated`:** `DATE NOT NULL` with **no** database default. Prisma sets it when it creates or updates a row; any insert that bypasses Prisma must supply it. (Whether Prisma preserves an explicitly supplied original value is still untested and is planned for after the table exists.) `datePosted` is `DATE NOT NULL` and `deadline` is `DATE` (calendar dates, no time zone). `status` defaults to `active`, `source` to `owner-added`.
+7. **Nothing is deleted or modified:** all 7 statements are `CREATE` (5 `CREATE TYPE`, 1 `CREATE TABLE`, 1 `CREATE UNIQUE INDEX`). There is no `DROP`, `ALTER`, `DELETE`, `UPDATE` or `INSERT`, and the database had no application tables or data to affect.
+8. **Compared with the earlier offline preview:** identical, except that the preview also began with `CREATE SCHEMA IF NOT EXISTS "public"` (a no-op because the schema already exists), which the generated file leaves out.
+9. **Bookkeeping objects created by the command:** yes, one. After the command the development database contains one table, `public._prisma_migrations` (Prisma's migration-history table), with **0 rows**. It was created on the `development` branch only. The `Opportunity` table and the enum types were **not** created (0 custom enum types). The temporary shadow database was cleaned up (the branch again lists only `neondb` and `postgres`).
+- **Original OpenRaiz repo:** 0 changed files, still at commit `0113d35`.
+- **Production:** not touched; the local configuration points to the development branch only.
+
+### Problems encountered
+- My first comparison of the generated SQL with the offline preview reported "differ" because of a macOS `sed` syntax error in my own script, and the first line of the offline output (a "Loaded Prisma config" message) was not stripped. A corrected comparison showed the only real difference is the no-op `CREATE SCHEMA` statement described above.
+
+### Errors or mistakes identified
+- The faulty comparison script above (agent's script, not the migration).
+
+### Corrections made
+- Replaced the comparison with a Node script that strips the config message and the `CREATE SCHEMA` block before comparing.
+- Filled in the earlier Step 2.6B commit reference (`bd29c85`).
+
+### Git
+- **Proposed commit message:** `Add initial Prisma migration for Opportunity table` (files: `prisma/migrations/20261016011916_init/migration.sql`, `prisma/migrations/migration_lock.toml`, `PROMPT_LOG.md`).
+- **Commit message:** `Add initial Prisma migration for Opportunity table` (no Co-Authored-By trailer)
+- **Follow-up prompt:** `Yes, commit and push the migration files`.
+- **Pre-commit checks (agent):** only `prisma/migrations/20261016011916_init/migration.sql`, `prisma/migrations/migration_lock.toml` and `PROMPT_LOG.md` staged; `.env`, `design-reference/` and generated files not staged; a scan of the staged diff found no credential, hostname or endpoint parts.
+- **Commit reference:** PENDING — the hash is not known until the commit exists; to be recorded in a later log update. The migration has **not** been applied; applying it is a separate step that awaits approval.
