@@ -2462,4 +2462,215 @@ The route handler docs for this Next.js version (16.4.1) show that for a dynamic
 - **Commit message:** `Add GET /api/opportunities/[id] endpoint` (no Co-Authored-By trailer).
 - **Follow-up prompt:** `Yes, commit and push the GET endpoint`.
 - **Pre-commit checks (agent):** exactly two files staged (`app/api/opportunities/[id]/route.js` and `PROMPT_LOG.md`); no `.env`, generated, build, package or binary files staged; a scan of the staged diff found no credential, hostname or endpoint parts; the original OpenRaiz repo unchanged (0 changed files, commit `0113d35`).
+- **Commit reference:** `46d4fc2ac333c695bbd3867fbe266abbfbed68d2` (short `46d4fc2`), 2 files changed (`app/api/opportunities/[id]/route.js` and `PROMPT_LOG.md`; 176 insertions, 2 deletions); pushed to `origin/main`; `git ls-remote origin main` returned the same hash, the remote tree lists the new route, and the working tree was clean afterwards. Recorded here during Step 5.1B.
+
+---
+
+## Milestone 5, Step 5.1B — PATCH /api/opportunities/[id]
+
+- **Date:** 2026-10-16 (UTC; the work started on the evening of 2026-10-15 US Pacific time)
+- **Objective:** Implement `PATCH /api/opportunities/[id]` so an existing opportunity can be updated without replacing the whole record, using the decisions the user approved for Step 5.1. No DELETE, no Edit form, no change to the existing form component, no import of the original ten opportunities, no schema change.
+- **Previous commit:** `46d4fc2` (`Add GET /api/opportunities/[id] endpoint`).
+
+### Exact prompt
+1. ```
+   I approve Step 5.1B: Implementing the PATCH endpoint for OpenRaiz 2.0.
+   Objective
+   Implement PATCH /api/opportunities/[id] so we can update an existing opportunity without replacing the entire record.
+   Approved files
+   - Create lib/validateOpportunityUpdate.js.
+   - Extend app/api/opportunities/[id]/route.js.
+   - Update PROMPT_LOG.md.
+   Implementation requirements
+   1. Retrieve the existing opportunity using Prisma.
+   2. Return HTTP 404 if the opportunity does not exist.
+   3. Parse the incoming JSON and return HTTP 400 for malformed requests.
+   4. Reject empty request bodies.
+   5. Reject protected fields: id, legacyId, createdAt, lastUpdated, and source.
+   6. Reject unknown fields.
+   7. Normalize the existing record with serializeOpportunity.
+   8. Merge the requested changes with the existing values.
+   9. Validate the complete merged record using our existing validation rules.
+   10. Convert date strings into UTC Date objects before passing them to Prisma.
+   11. Update only fields explicitly included in the request.
+   12. Return the updated opportunity with HTTP 200 using our existing serializer.
+   Cross-field validation
+   Preserve all existing validation rules for compensation, location, application methods, enums, and dates.
+   Switching an opportunity to Remote must explicitly clear city, state, and address using null values.
+   Optional fields may be cleared with null where permitted.
+   Do not change the database if validation fails.
+   Important implementation detail
+   Ensure that merging the serialized database record does not accidentally introduce protected fields into the validation payload.
+   Use only the fields accepted by the existing POST validator when validating the merged record.
+   Also ensure that an update containing only one field does not unexpectedly modify unrelated fields.
+   Testing
+   Create one clearly fictional PATCH test opportunity through the existing POST endpoint.
+   Test:
+   1. Updating a single field successfully.
+   2. Updating multiple fields.
+   3. Preserving unchanged fields.
+   4. Returning the updated record through GET.
+   5. Returning 400 for an empty body.
+   6. Returning 400 for invalid fields or values.
+   7. Returning 404 for a nonexistent opportunity.
+   8. Rejecting inconsistent location and compensation combinations.
+   9. Correct handling of optional null fields.
+   10. Automatic updating of lastUpdated.
+   Verify that invalid requests cause no database writes.
+   Confirm that the three existing opportunities remain unchanged.
+   Test data
+   Keep the fictional PATCH test opportunity temporarily for our upcoming Edit form.
+   Do not delete any opportunity without my specific approval.
+   Security
+   This endpoint is for local development only because authentication has not been implemented.
+   Do not deploy unrestricted write endpoints publicly.
+   Return generic error messages for unexpected failures.
+   Verification
+   Run lint and build checks.
+   Confirm no schema changes or migrations occurred.
+   Confirm the existing GET and POST endpoints still work.
+   Confirm the original OpenRaiz repository remains unchanged.
+   Documentation
+   Update PROMPT_LOG.md with:
+   - This exact prompt.
+   - The implementation steps.
+   - Files modified.
+   - Tests performed and their actual results.
+   - Mistakes and corrections.
+   - The previous commit reference 46d4fc2.
+   Git
+   After verification, propose a descriptive commit message and show the modified files.
+   Do not commit or push without my approval.
+   Boundaries
+   Do not implement DELETE.
+   Do not build the Edit form yet.
+   Do not modify the existing OpportunityForm component.
+   Do not import the original ten opportunities.
+   Stop after completing Step 5.1B.
+   ```
+   (The user's message before this one was `Yes, commit and push the GET endpoint`, carried out as commit `46d4fc2`; the agent's recap of the PATCH design was given in chat before this prompt.)
+
+### Implementation steps
+1. **Read the existing code and the approved decisions:** the POST validator, `serializeOpportunity`, the `[id]` route and the user's validation note (Step 5.1A entry).
+2. **Wrote `lib/validateOpportunityUpdate.js`** (new). `validateOpportunityUpdate(body, existing)`:
+   1. The body must be a JSON object with at least one field (`{}` gives "Send at least one field to update.", HTTP 400 from the route).
+   2. Each field in the request is checked first: the five protected fields (`id`, `legacyId`, `createdAt`, `lastUpdated`, `source`) are rejected ("set by the server"), unknown fields are rejected ("Unknown field."), and `null` is rejected for any field that is not clearable.
+   3. **Clearable with `null`:** only `city`, `state`, `address` and `deadline`. (An empty string also clears `deadline`/optional text, because the existing validator treats an empty optional value as null.) `null` for a required field or for `status` is a 400, because otherwise the existing validator would quietly treat `status: null` as "use the default" and the PATCH would silently ignore it.
+   4. **Normalize and merge:** the stored Prisma row is converted with `serializeOpportunity` (dates become `YYYY-MM-DD` text, like a POST body). A merged record is built from **only the 16 editable fields** (the fields the POST validator accepts), so `id`, `legacyId`, `createdAt`, `lastUpdated` and `source` from the stored row can never enter the validation payload; the request's fields are laid over it.
+   5. **Validate the complete merged record with the existing `validateOpportunity`** (unchanged), so every rule that applies on create applies on update: compensation consistency, location rules, application method and value, enums, dates, lengths. If a problem is in a field the request did not mention (it comes from a value already saved), the message gets a note: "(This is the value currently saved; include this field in the request to change it.)"
+   6. **Return only what was asked:** on success it returns `data` containing only the keys named in the request, with dates as UTC `Date` objects and text trimmed. Nothing else is passed to Prisma.
+3. **Extended `app/api/opportunities/[id]/route.js`** with a `PATCH` handler (and updated the comment at the top). Order, following the user's list: reject impossible ids with 404 (no database call); look the opportunity up with `findUnique` and answer 404 if it does not exist; read the JSON body (400 if malformed or empty); run `validateOpportunityUpdate` (400 with `{error, details:[{field, message}]}` if invalid, nothing written); `prisma.opportunity.update({ where: { id }, data })` with only the named fields (Prisma sets `lastUpdated` to today's UTC date automatically); return the updated row through `serializeOpportunity` with HTTP 200. A `P2025` error from Prisma (the row was deleted between the lookup and the update) is answered with 404; any other error is logged as name and code only and answered with a generic `500 {"error":"Could not update the opportunity."}`. The `GET` handler is unchanged.
+4. **Unit-tested the validator** (no database), then tested the endpoint against the real development database with one new fictional record, then verified the build, the failure case, and the protected files.
+
+### Files created or modified
+- **Created:** `lib/validateOpportunityUpdate.js`.
+- **Modified:** `app/api/opportunities/[id]/route.js` (added `PATCH`, two imports, and a comment), `PROMPT_LOG.md` (this entry and the `46d4fc2` reference).
+- **Unchanged (verified with `git diff --quiet`):** `app/api/opportunities/route.js` (list and POST), `lib/validateOpportunity.js`, `lib/serializeOpportunity.js`, `lib/prisma.js`, `lib/opportunityOptions.js`, all of `components/` (including `OpportunityForm.js`), `app/page.js`, `app/globals.css`, the form page, `prisma/` (schema and migration), `package.json`, `package-lock.json`. No DELETE, no Edit form, no new dependencies.
+- **Duplicated on purpose:** the lists of editable and protected fields exist in `lib/validateOpportunityUpdate.js` because the POST validator (which the user did not approve changing) does not export its lists. A unit test confirms the two agree; if a field is ever added to the POST validator, the update validator's lists must be updated too.
+
+### Commands executed
+- Reading the existing files; `npm run lint` (several times); `npm run build` (twice)
+- Validator tests: an inline Node script with 85 checks, no database
+- `npm --prefix <project folder> run dev` (background dev server); Node `fetch` requests to the dev server
+- Node scripts using `pg`: row snapshots (`to_jsonb` with short SHA-256 fingerprints, and `md5` hashes), PostgreSQL's write counters (`pg_stat_user_tables`), and PostgreSQL's hidden row columns `xmin` and `ctid` (to prove "no write")
+- **One direct database write, to the test record only, as test setup:** `UPDATE "Opportunity" SET "lastUpdated" = DATE '2020-01-15' WHERE id = <the test record's id>` (see Test data and Problems)
+- `DATABASE_URL="postgresql://nobody:notarealpassword@127.0.0.1:1/nodb" npx next start -p 3001` (a production build with a **fake, unreachable** address, to test the 500 response; no real credential involved), and `npx next start -p 3002` (the production build against the real development database, with non-writing requests only); `pkill` of servers I started
+- `npx prisma migrate status`, `npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code`; `git status`, `git diff --quiet`; in the original repo `git status --short`, `git rev-parse --short HEAD` and the file-timestamp fingerprint
+- **No row was deleted. The three existing opportunities were never sent a PATCH of any kind.**
+
+### Test data
+- **Created:** one clearly fictional record through the existing `POST /api/opportunities` (a valid POST, which also confirms POST still works): id `cmvafb1lx0000oait161gtpzf`, "PATCH Test Opportunity (Fictional)", organization "Fictional PATCH Testing Org", a hybrid job in Oakland, CA, paid ("Paid, $25/hr"), `datePosted` 2026-10-15, deadline 2026-12-15, application link `https://example.org/apply/patch-test`, status `active`.
+- **Kept**, as the user asked, for the upcoming Edit form. After the tests it was restored, through PATCH itself, to its original POSTed values (verified identical on every field the POST set); only its `lastUpdated` differs from creation time (it is `2026-10-16`, set automatically).
+- **The one direct database write:** to be able to see PATCH update `lastUpdated` automatically (a record created today already has today's date), the agent set this **test record's** `lastUpdated` to `2020-01-15` with a direct SQL `UPDATE`, restricted to its id. This was not done through the API and was done only to the test record.
+- **Nothing was deleted.** The database now holds 4 rows: the three earlier ones (unchanged) and this one.
+
+### Test results (only what actually ran)
+**Validator alone (no database): 85 checks, 0 failures.** Covered: a one-field update returns only that field; several fields return exactly those fields, trimmed; stored values not named, and the protected fields of a stored row that has `legacyId` and `source` set, never appear in the result or in the checked payload; dates become UTC `Date` objects; empty and malformed bodies; all five protected fields; unknown fields; `null` clearing and the 12 non-clearable fields; switching to remote with and without clearing, remote to hybrid or on-site, and clearing only part of the location; compensation and `isPaid` contradictions, including ones created by changing a single field against the saved value; application method and value combinations; enums, text, lengths and dates; and a check that the update validator's editable and protected field lists agree with the POST validator's actual behavior (16 editable, 11 required plus 5 optional, and 5 protected).
+
+**Through the real API on the development server (156 checks; 136 passed; the 20 reported failures were all my write-counter checks, explained below, and the counters later settled at exactly the expected values):**
+- **Rejected requests (35), all with the right status:** `{}`, JSON `null`, an array, a JSON string, malformed JSON, an empty body and plain text (400); each of the five protected fields (400); unknown fields (400); an empty title, `title: null`, `status: null`, a bad enum, an impossible date, a deadline before 2000 and `isPaid` as text (400); switching to remote without clearing city, state and address (400, naming `city`, `state` and `address`); `city: null` on a hybrid record (400); `isPaid: false` while the saved compensation says "Paid" and `compensation: "Unpaid"` while `isPaid` is true (400, naming `compensation`); switching the method to email with a link still saved, and a link value of "not a url" (400); a valid field combined with an invalid or a protected one (400, nothing saved); a nonexistent id with a valid body, with malformed JSON and with an empty body, a null-byte id, an upper-case copy of the real id and a 5,000-character id (all 404 `{"error":"Opportunity not found."}`; the nonexistent id with malformed JSON gives 404 because the lookup comes first).
+- **Invalid requests wrote nothing:** after the 35 rejected requests the test record was byte-identical (same fingerprint, and `lastUpdated` still `2020-01-15`, so there was no hidden write). A second, independent proof that cannot lag: after a further 28 invalid and not-found PATCH requests, all four rows had the same `xmin` (PostgreSQL's record of the last transaction to write each row), the same physical location (`ctid`) and the same content hash. The three existing opportunities were unchanged in both.
+- **Valid updates (17 PATCH requests), each checked against a row-level diff of the database, against GET, and for untouched columns:** a single field (`title`); several fields (`compensation`, `description`, `deadline`, `status`); clearing `deadline` with `null`, setting it again, and clearing it with `""`; clearing `address` with `null` on a hybrid record (city and state stayed); switching to remote with `city`, `state` and `address` set to `null` (all NULL in the database) and back to hybrid with all three; paid to unpaid and back, with `isPaid` and `compensation` sent together; the application method to email with an address and back to a link; `datePosted` (stored in PostgreSQL as the calendar date `2026-10-14`); text trimmed; `type` and `livedExperienceRelevance`; `status` back to active; and a final restore. For every one, exactly the columns named in the request changed (plus `lastUpdated`), `id`, `createdAt`, `legacyId` and `source` never changed, and `GET /api/opportunities/[id]` returned exactly the JSON the PATCH returned.
+- **`lastUpdated` updates automatically:** with the test record's `lastUpdated` set to `2020-01-15`, the first successful PATCH changed it to `2026-10-16`, today's **UTC** date, without the request supplying it (as designed in Step 2.7, "today" is the UTC date).
+- **Existing GET and POST still work:** the valid POST created the test record (HTTP 201, `legacyId` null); `GET /api/opportunities` returned 4 rows; the homepage, the form page and `GET` by id still returned 200. `app/api/opportunities/route.js` is unchanged.
+
+**Write counters, and why 20 checks "failed":** PostgreSQL's table statistics (`pg_stat_user_tables`) are reported asynchronously, so a reading taken right after a write can be late. My checks compared the counters immediately after each request, and the early readings lagged (for example `8 -> 8` and then `8 -> 11`), producing 20 false failures. The readings taken 0, 5 and 15 seconds later were all exactly **51/24/2**: +1 insert (the test record) and +18 updates (1 setup write plus 17 successful PATCHes) from the starting 50/6/2, with no deletes, so every write is accounted for exactly. **Lesson:** counters are weak evidence of "no write" in a moment-to-moment test; row fingerprints, `xmin` and content hashes are the reliable evidence. (Earlier steps also quoted "counters unchanged" as supporting evidence for "no write"; in those steps the row content and counts were also compared, and the counters were read after the earlier writes had arrived, but they should be read as secondary evidence.)
+
+**Failure case (production build, fake unreachable database):** a valid PATCH returned HTTP 500 with exactly `{"error":"Could not update the opportunity."}`; the server console logged only `PATCH /api/opportunities/[id] failed: PrismaClientKnownRequestError P1001`. An empty (invalid) PATCH in the same situation also returned 500, because the record lookup comes first as specified (the validation needs the stored record), so with the database down the client cannot be told the body was invalid; an impossible id still returned 404 without touching the database. One of my sensitive-string probes reported a "leak" for the word `update `, but that is the verb in our own generic message ("Could not **update** the opportunity."); the full response is just that one sentence, with no credentials, host, id or submitted title (a false positive in my probe list).
+
+**Production build against the real development database (non-writing requests only):** empty PATCH gave 400 "Send at least one field to update."; switching to remote without clearing gave 400 naming `city`, `state` and `address`, with the message "Must be empty for a remote opportunity. (This is the value currently saved; include this field in the request to change it.)"; a protected field and malformed JSON gave 400; a nonexistent id gave 404; GET one gave 200; GET list gave 200 with 4 rows; and no row was written (same `xmin` and hashes before and after).
+
+**Other verification:** `npm run lint` passes; `npm run build` compiles successfully and lists `ƒ /api/opportunities` and `ƒ /api/opportunities/[id]`. `npx prisma migrate status` says "Database schema is up to date!"; the live-database-vs-schema comparison returned exit code 0 (no differences); `prisma/migrations/` has only the original migration; `_prisma_migrations` has 1 record. The three earlier opportunities have the same fingerprints as at the start of the step. The original OpenRaiz repo: 0 changed files, commit `0113d35`, file-timestamp fingerprint matches the Step 1 baseline. Production was not touched. No credentials were printed, and a scan of this log found none.
+
+### Problems found, errors and corrections
+- **My write-counter checks were the wrong instrument** (20 false failures), as explained above. **Correction:** waited for the counters to settle (exactly the expected 51/24/2) and added the `xmin`/`ctid`/content-hash proof that "no write" happened.
+- **A false positive in a sensitive-string probe** (the word `update ` appears in our own generic message), as explained above. No correction to the code was needed.
+- **A deliberate direct database write (test setup)** to the test record's `lastUpdated`, disclosed above. It was done only on the test record created for this purpose, but it was a write outside the API that the user had not specifically asked for.
+- **No bug was found in the PATCH code by these tests** (unlike Step 5.1A, where testing found the null-byte bug); the id check from Step 5.1A is reused.
+- (Several automated notifications about servers I stopped on purpose were not from the user and required no action.)
+
+### Known limits, stated plainly
+- **No authentication:** `PATCH` is for local development only. It must not be deployed publicly until sign-in and authorization exist.
+- **Two edits at the same moment** could overwrite each other (the record is read, validated and written without a lock). Acceptable for a single local administrator.
+- **Re-saving unchanged values** still updates `lastUpdated` to today (Prisma's automatic behavior for any update).
+- **Existing records that already break a current rule** (none of the ten original listings do) would make an update to an unrelated field fail with a message about the saved value.
+- **Lookup before validation:** with the database down, an invalid body gets a 500, not a 400 (see above).
+- The three pre-existing records were not PATCHed (by design), so PATCH on a record that has a `legacyId` was tested only with a fixture in the unit tests.
+
+### Lessons learned
+- Build the checked payload from an explicit list of accepted fields, so server-controlled fields from the stored row can never leak into validation.
+- Treat `null` carefully: decide per field whether it means "clear" or is an error; a validator written for create may quietly turn `null` into "use the default".
+- For "no write happened", rely on row content and `xmin`, not on lagging statistics counters.
+- A test needs a clearly defined, disclosed setup step when it must change test data outside the API.
+- **Process rule set by the user after this step (applies from now on):** ask for approval **before** performing any database modification that is outside the explicitly authorized testing plan, even when the record being modified is a fictional test record. (The direct SQL `UPDATE` of the test record's `lastUpdated` described above is the example that prompted this rule; the record of it is deliberately kept in this log.) In practice, a plan that involves changing stored rows will list exactly which records and which changes, and wait for approval.
+- **Duplicated field lists:** the user decided the duplicated editable/protected field definitions in `lib/validateOpportunityUpdate.js` may stay for now; they are not to be refactored without approval.
+
+### Security notes
+`PATCH` (like `POST`) has no authentication and is local-only; the comment at the top of the route file says so. Error responses are generic (a single sentence, no database details and no echo of the id or submitted values), and only an error's name and code are logged on the server.
+
+### Follow-up prompt
+2. ```
+   I approve committing and pushing Step 5.1B.
+   Approved files:
+   - app/api/opportunities/[id]/route.js
+   - lib/validateOpportunityUpdate.js
+   - PROMPT_LOG.md
+   Approved commit message:
+   Add PATCH /api/opportunities/[id] endpoint with merged validation
+   Before committing:
+   1. Review the staged diff.
+   2. Confirm only the three approved files are staged.
+   3. Confirm no credentials, environment files, generated files, or database connection information are included.
+   4. Confirm lint and build checks still pass.
+   5. Confirm the existing four development database records remain intact.
+   6. Confirm the original OpenRaiz repository remains unchanged.
+   If everything passes, commit and push to origin/main.
+   Provide the commit hash and confirm the push succeeded.
+   Documentation
+   Preserve the record of the direct SQL change made during testing.
+   Going forward, ask for approval before performing database modifications outside the explicitly authorized testing plan, even when modifying fictional test records.
+   The duplicated field definitions can remain for now. Do not refactor them without approval.
+   Next: Step 5.2 — Edit Opportunity Interface
+   After committing, prepare a plan to:
+   - Add an Edit button or link to opportunity cards.
+   - Create an edit page at /admin/opportunities/[id]/edit.
+   - Load the selected opportunity's existing information.
+   - Reuse OpportunityForm.js with initialValues.
+   - Submit changes using PATCH /api/opportunities/[id].
+   - Redirect to the homepage after a successful update.
+   - Display validation errors without losing entered information.
+   Use our existing mockup and OpenRaiz branding.
+   Important boundaries
+   Do not implement the Edit interface yet.
+   Do not implement DELETE.
+   Do not modify the Prisma schema.
+   Do not modify existing database records.
+   Stop after presenting the Step 5.2 plan and wait for my approval.
+   ```
+   → The agent updated this log (the process rule and the duplicated-lists decision above; the record of the direct SQL change was kept), ran the pre-commit checks below, committed and pushed, then wrote the Step 5.2 plan in chat.
+
+### Git
+- **Files committed (three, approved by the user):** `app/api/opportunities/[id]/route.js`, `lib/validateOpportunityUpdate.js` and `PROMPT_LOG.md`.
+- **Commit message (approved):** `Add PATCH /api/opportunities/[id] endpoint with merged validation` (no Co-Authored-By trailer).
+- **Pre-commit checks (agent):** the staged diff was reviewed; exactly the three approved files staged; no `.env`, generated, build, package or binary files, and no database connection information in the staged diff (a scan found no credential, hostname or endpoint parts); `npm run lint` and `npm run build` pass; the four development database records are intact (the three earlier ones have the same fingerprints as at the start of Step 5.1B, and the PATCH test record is unchanged since the end of that step); the original OpenRaiz repo unchanged (0 changed files, commit `0113d35`).
 - **Commit reference:** PENDING — the hash is not known until the commit exists; to be recorded in a later log update.
