@@ -229,3 +229,244 @@ body {
     padding-left: calc(44px + 0.85rem);
   }
 }
+
+/* ---------- Buttons ---------- */
+.button {
+  display: inline-block;
+  padding: 0.55rem 1.1rem;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-radius: 8px;
+}
+
+.button-primary {
+  color: #fff;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.button-primary:hover {
+  background: #265c41;
+}
+
+.button-primary:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.button-secondary {
+  color: var(--color-text);
+  background: #fff;
+  border-color: #d9d0c0;
+}
+
+.button-secondary:hover {
+  background: var(--color-nav-bg);
+}
+
+.button:focus-visible,
+.opportunity-form input:focus-visible,
+.opportunity-form select:focus-visible,
+.opportunity-form textarea:focus-visible {
+  outline: 3px solid rgba(46, 111, 78, 0.45);
+  outline-offset: 1px;
+}
+
+/* ---------- Page chrome shared by the form page and the homepage ---------- */
+.page-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.back-link {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+}
+
+.back-link a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.back-link a:hover {
+  text-decoration: underline;
+}
+
+.notice-local {
+  margin: 0 0 1.25rem;
+  padding: 0.7rem 1rem;
+  font-size: 0.9rem;
+  color: var(--color-text);
+  background: #fff6ef;
+  border: 1px solid #f0c9b3;
+  border-left: 4px solid var(--color-accent);
+  border-radius: 8px;
+}
+
+/* ---------- Opportunity form ---------- */
+.opportunity-form {
+  padding: 1.25rem 1.25rem 1.5rem;
+  background: #fff;
+  border: 1px solid #e5ded2;
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(43, 43, 43, 0.04), 0 4px 12px rgba(43, 43, 43, 0.04);
+}
+
+.form-note {
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+
+.required-mark {
+  color: var(--color-accent-text);
+  font-weight: 700;
+}
+
+.form-section + .form-section {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #e5ded2;
+}
+
+.form-section h2 {
+  margin: 0 0 0.9rem;
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  color: var(--color-primary);
+}
+
+/* One column on phones, two on larger screens */
+.form-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem 1.25rem;
+}
+
+.field {
+  min-width: 0;
+}
+
+.field label,
+.radio-group legend {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.opportunity-form input[type="text"],
+.opportunity-form input[type="date"],
+.opportunity-form select,
+.opportunity-form textarea {
+  display: block;
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--color-text);
+  background: #fff;
+  border: 1px solid #d9d0c0;
+  border-radius: 8px;
+}
+
+.opportunity-form textarea {
+  resize: vertical;
+}
+
+.field-hint {
+  margin: 0.3rem 0 0;
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.field-error {
+  margin: 0.3rem 0 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-accent-text);
+}
+
+.field.has-error input,
+.field.has-error select,
+.field.has-error textarea {
+  border-color: var(--color-accent);
+}
+
+.radio-group {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.radio-group legend {
+  padding: 0;
+}
+
+/* Written as ".field .radio-option" so it wins over the general ".field label" style above */
+.field .radio-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 1.25rem 0 0;
+  font-size: 0.95rem;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.form-summary {
+  margin: 0 0 1rem;
+  padding: 0.8rem 1rem;
+  color: var(--color-text);
+  background: #fff6ef;
+  border: 1px solid var(--color-accent);
+  border-radius: 8px;
+}
+
+.form-summary p {
+  margin: 0;
+  font-weight: 600;
+  color: var(--color-accent-text);
+}
+
+.form-summary ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.2rem;
+  font-size: 0.9rem;
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #e5ded2;
+}
+
+@media (min-width: 640px) {
+  .form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .field-wide {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 639px) {
+  .form-actions .button {
+    flex: 1 1 100%;
+  }
+}

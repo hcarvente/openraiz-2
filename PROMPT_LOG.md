@@ -2086,3 +2086,241 @@ The mockup (`design-reference/openraiz-2-mockup.png`) shows a homepage, an oppor
 - **Commit reference:** `1d39f2e8ad3ca814b0765bff8e560adeb11dfa56` (short `1d39f2e`), 5 files changed (528 insertions, 4 deletions); pushed to `origin/main`; `git ls-remote origin main` returned the same hash, and the remote tree lists `components/OpportunityCard.js` and `design-reference/openraiz-2-mockup.png`. Recorded here during Step 4.2.
 - **Follow-up prompt:** the user approved a documentation-only commit with the message `Record homepage commit in prompt log` (the first part of their next prompt, quoted in full under Step 4.2).
 - **Second commit:** `Record homepage commit in prompt log` (log-only; its hash is visible in `git log`).
+
+---
+
+## Milestone 4, Step 4.2 — Add Opportunity form
+
+- **Date:** 2026-10-16 (UTC; the work started on the evening of 2026-10-15 US Pacific time)
+- **Objective:** First, commit a documentation-only update (the Step 4.1 commit hash and the staged-file scan error). Then build the Add Opportunity form at `/admin/opportunities/new` as a reusable Client Component that sends a flat JSON body to the existing `POST /api/opportunities`, shows the server's validation errors, redirects to the homepage after a successful save, and add an "Add Opportunity" link to the homepage. No Edit, PATCH, DELETE, search, filters, import, schema or API changes.
+- **Previous commits:** `1d39f2e` (`Display saved opportunities on the homepage with OpportunityCard`) and `a6e7348` (`Record homepage commit in prompt log`, the documentation commit made at the start of this step).
+
+### Exact prompts
+1. ```
+   I approve Milestone 4, Step 4.2: Building the Add Opportunity form for OpenRaiz 2.0.
+   Approved decisions
+   1. Create the form on a separate page at /admin/opportunities/new.
+   2. After a successful submission, redirect to the homepage so the newly created opportunity appears.
+   3. Add a small "Add Opportunity" link or button to the homepage.
+   4. You may use an existing browser-testing capability to test the form. Do not build a custom browser automation framework or install new testing dependencies without approval.
+   5. Keep one additional fictional opportunity created during testing as a second sample record in our Neon development database.
+   6. Preserve all original OpenRaiz branding and use our approved mockup as the visual reference.
+   First: Documentation
+   I approve the documentation-only commit:
+   Record homepage commit in prompt log
+   Update PROMPT_LOG.md to include:
+   - The Step 4.1 commit hash 1d39f2e.
+   - The staged-file credential scan error and how you corrected it.
+   Review the documentation changes, confirm they contain no credentials, then commit and push only PROMPT_LOG.md.
+   Next: Build the form
+   Create a reusable Client Component:
+   components/OpportunityForm.js
+   Create the form page:
+   app/admin/opportunities/new/page.js
+   Create:
+   lib/opportunityOptions.js
+   Organize the form into three sections:
+   Section 1: Opportunity Details
+   - Title
+   - Organization
+   - Opportunity type
+   - Description
+   - Paid or unpaid
+   - Compensation
+   - Lived-experience relevance
+   Section 2: Location & Application
+   - Work arrangement: remote, hybrid, or onsite
+   - City and state for hybrid or onsite opportunities
+   - Optional address
+   - Application method: URL or email
+   - Application link or email address
+   Section 3: Dates & Status
+   - Date posted, defaulting to today's date
+   - Optional application deadline
+   - Opportunity status, defaulting to active
+   Preserve all approved enum values.
+   Form behavior
+   1. Use React state to manage form values.
+   2. Submit a flat JSON object to our existing POST /api/opportunities endpoint.
+   3. Do not change the API or its validation rules.
+   4. Show clear validation errors returned by the server.
+   5. Show a simple error message if the request fails.
+   6. Disable the submit button while the request is processing to help prevent duplicate submissions.
+   7. Redirect to the homepage after HTTP 201.
+   8. Ensure the homepage displays the newly saved opportunity.
+   Design the form so it can eventually support editing an existing opportunity, but do not implement Edit functionality yet.
+   Homepage
+   Add a small "Add Opportunity" link to app/page.js.
+   Keep the existing OpportunityCard and database query behavior unchanged.
+   Styling
+   Use our existing OpenRaiz color palette and typography.
+   Follow the general structure of the approved mockup.
+   Use a two-column form layout on larger screens and a single column on mobile.
+   Do not introduce additional styling libraries.
+   Verification
+   1. Confirm the form loads at /admin/opportunities/new.
+   2. Confirm all fields render correctly.
+   3. Confirm selecting remote hides unnecessary location fields.
+   4. Confirm native required-field validation works.
+   5. Confirm server-side validation errors display correctly.
+   6. Confirm the form submits to the existing POST endpoint.
+   7. Confirm a valid opportunity is saved to Neon development.
+   8. Confirm the browser redirects to the homepage after saving.
+   9. Confirm the new opportunity appears in the directory after refresh.
+   10. Confirm the original fictional opportunity remains unchanged.
+   11. Run lint and build checks.
+   12. Confirm no schema changes or migrations occurred.
+   Test with fictional opportunity data only.
+   Do not delete existing opportunities.
+   Do not claim I personally verified the interface until I confirm it.
+   Security
+   This remains a local development application.
+   No authentication exists yet, so do not deploy the administrative form or unrestricted write endpoints publicly.
+   Prompt log
+   Document the exact prompt, changes, testing results, errors, corrections, and lessons learned in PROMPT_LOG.md.
+   Git
+   After completing Step 4.2, show me the modified files and propose a commit message.
+   Do not commit or push the form changes without my approval.
+   Boundaries
+   Do not implement PATCH or DELETE.
+   Do not add search or filters.
+   Do not import the ten original opportunities.
+   Do not modify the Prisma schema.
+   Do not modify the original OpenRaiz repository.
+   Stop after Step 4.2 and wait for my approval.
+   ```
+   (The user's message before this one was the Step 4.1 browser confirmation and commit approval, "Browser check confirmed, commit and push"; the agent's Step 4.2 plan and five questions were given in chat, and this prompt contains the user's answers. The agent had recommended a separate page, a redirect to the homepage, a homepage link, a throwaway headless Chrome script for testing, and keeping one new fictional row; the user approved all except the custom automation: item 4 allows an "existing browser-testing capability" but not a custom browser-automation framework.)
+
+### Part 1: documentation-only commit
+The log was updated with the Step 4.1 commit hash and the staged-file credential scan error and its correction. Only `PROMPT_LOG.md` was staged; the change was reviewed line by line; a credential scan of the staged diff found nothing. **Commit:** `a6e734820bf2f17f4145bb708b9e15cbca898b29` (short `a6e7348`), `Record homepage commit in prompt log`, pushed to `origin/main` (`git ls-remote` returned the same hash; working tree clean afterwards).
+
+### What testing tools exist, and what the agent did not do
+A search of the available tools found no browser-driving tool in this session. The only existing browser capability is the headless Chrome command line, which can load a page, take a screenshot, and dump the page's DOM and console output. It cannot type, click or submit. Following the user's instruction, the agent did **not** build a custom automation framework (for example a script that drives Chrome through its debugging protocol) and installed nothing. This means the interactive behaviors (typing, choosing Remote, native required-field popups, clicking Save, seeing server errors beside fields, the redirect) were **not driven by the agent in a browser**. See "Verification" for exactly what was and was not verified, and the checklist for the user.
+
+### Reading the bundled Next.js docs first
+The agent read the `useRouter` docs (`router.push`, `router.refresh`) in `node_modules/next/dist/docs/`. Design choice from that: after a successful save the form does a full page load of the homepage (`window.location.assign("/")`) instead of a client-side `router.push`. A fresh request guarantees the server runs the database query again, so the new card always appears, with no chance of a stale client-side cache. (This is still a redirect to the homepage. The agent could not drive a browser to test the client-cache case, which is why it chose the approach that cannot be stale.)
+
+### Files created or modified
+- **Created:** `components/OpportunityForm.js` (the form; the first Client Component), `app/admin/opportunities/new/page.js` (the page), `lib/opportunityOptions.js`.
+- **Modified:** `app/page.js` (added the "Add Opportunity" link and a title row; the card, the query and everything else are unchanged), `app/globals.css` (button, form and notice styles appended; nothing existing removed), `PROMPT_LOG.md` (this entry).
+- **Unchanged (verified with `git diff --quiet`):** `app/api/` (the API), `lib/validateOpportunity.js`, `lib/prisma.js`, `lib/serializeOpportunity.js`, `components/OpportunityCard.js`, `components/SiteHeader.js`, `prisma/` (schema and migration), `package.json`, `package-lock.json`. No new dependencies.
+- Screenshots used for visual review are in `.next/preview/` (a git-ignored build folder), not in any commit.
+- **Beyond the prompt:** `lib/opportunityOptions.js` holds not only the option lists but also small plain-JavaScript helpers (`emptyOpportunityValues`, `toRequestBody`, `groupErrorsByField`, `showsLocationFields`, `todayLocalDate`) so that the logic of the form can be tested without a browser. The form page also shows a visible "Local development only" notice.
+
+### What the code does
+- **`lib/opportunityOptions.js`:** the approved dropdown values and labels (type, relevance, status, work arrangement, application method), the same length limits as the server, field names for error messages, and helpers. `toRequestBody` turns the form's values into the flat JSON the API expects: it leaves out empty optional values (a blank deadline, a blank address), leaves out city, state and address unless the arrangement is hybrid or on-site (the API rejects them for remote), turns the Paid/Unpaid choice into `isPaid` true or false, and omits `isPaid` if nothing was chosen so the server can name it. `groupErrorsByField` turns the API's `[{field, message}]` list into one message per field.
+- **`components/OpportunityForm.js`:** `"use client"`. Keeps every value in React state (`useState`). Three sections (Opportunity details; Location & application; Dates & status) in a white card, two columns from 640 px wide and one column below. Native `required` attributes on the required fields; `maxLength` limits; labels tied to inputs; each server error is shown under its field (and listed in a summary announced as an alert, which receives focus); fields with `aria-invalid` and `aria-describedby`. City and State (required) and Address (optional) appear only for Hybrid or On-site. Application link or email is a plain text box (not `type="url"` or `type="email"`) so the server's rules, not the browser's, decide validity. "Date posted" shows today's date in the visitor's own time zone until changed (`useSyncExternalStore`, see Problems). The submit handler sends `fetch("/api/opportunities", { method: "POST", ... })`, ignores a second click while saving, disables the button and shows "Saving…", redirects on HTTP 201, shows the server's per-field messages on HTTP 400, and shows a plain message for any other failure or a network error ("...the opportunity was not saved. Please try again."). It accepts `initialValues` and has a comment marking the one place an edit (PATCH) would differ, but no edit logic exists.
+- **`app/admin/opportunities/new/page.js`:** a Server Component with the branded header, a back link, the heading, the local-only notice and the form.
+- **`app/page.js`:** a small green "Add Opportunity" button next to the "Opportunities" heading.
+- **`app/globals.css`:** button styles (green primary, plain secondary), the notice, the form card, sections, fields, errors and a mobile layout, using the original palette and the `system-ui` fonts. No styling library.
+
+### Commands executed
+- A tool search for browser-driving tools; reading docs (`sed`, `grep`) under `node_modules/next/dist/docs/`
+- `npm run lint` (several times), `npm run build` (twice)
+- `npm --prefix <project folder> run dev` (background dev server); `curl` and Node `fetch` requests to the dev server
+- Read-only Node scripts using `pg`: row snapshots (`to_jsonb`), row counts, PostgreSQL write counters for `Opportunity`, a read of the stored row
+- Headless Chrome (`--headless=new`, throwaway profiles in `.next/preview/`, not the user's profile): `--dump-dom` with console logging, and `--screenshot` at desktop and 390 px widths (an iframe frame was used for the 390 px width)
+- Inline Node scripts: unit tests of the helpers under `TZ=UTC`, `America/Los_Angeles` and `Pacific/Kiritimati`; a form-to-API contract test that builds each request body with the form's own `toRequestBody` and sends it to the real endpoint
+- `DATABASE_URL="postgresql://nobody:notarealpassword@127.0.0.1:1/nodb" npx next start -p 3001` (a production build with a **fake, unreachable** address, to test the failure response; no real database or credential involved); `pkill` of servers I started
+- `npx prisma migrate status`, `npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code`; `git status`, `git diff --quiet`; in the original repo `git status --short`, `git rev-parse --short HEAD` and the file-timestamp fingerprint
+- **No row was deleted or modified.**
+
+### Verification results (only what actually ran), numbered as in the prompt
+1. **Form loads at `/admin/opportunities/new`:** HTTP 200; title "Add Opportunity | OpenRaiz"; branded header and heading; back link; the local-only notice; all three sections.
+2. **All fields render correctly (server-rendered HTML and the live DOM):** Title, Organization, Opportunity type, Lived-experience relevance, Compensation, Description, Work arrangement, Application method, Application link or email, Date posted (required), Application deadline and Status (optional), plus two required Paid/Unpaid radio buttons: the right element type and required or optional setting for each. The dropdown values are exactly the approved enum values (type: job, internship, fellowship, volunteer; relevance: required, preferred, welcomed, relevant; arrangement: remote, hybrid, onsite; method: url, email; status: active, filled, archived). Status defaults to Active (`selected`). In headless Chrome after the page's JavaScript ran, "Date posted" held today's local date (`2026-10-15`), the page loaded with no hydration error and the page's console showed only the dev server's "[HMR] connected" message (the rest was unrelated macOS noise from Chrome). Screenshots reviewed by the agent: the desktop layout has the three sections in a two-column grid with the sprout header and original colors; in a true 390 px frame it collapses to one column with full-width buttons and no overflow.
+3. **Selecting Remote hides unnecessary location fields: NOT driven in a browser.** What was verified: the form renders with no City, State or Address fields while no arrangement is chosen; the helper `toRequestBody` leaves out city, state and address for remote even if text was typed earlier (tested, including through the real API, where the remote request was accepted with those leftovers removed); and `showsLocationFields` is true only for hybrid and on-site. The show/hide on selecting an option is code (`showLocation ? ... : null` in the component) that the agent read but did not see run. **This needs the user's check.**
+4. **Native required-field validation: NOT driven in a browser.** What was verified: the `required` attribute is present on exactly the 11 required inputs and the Paid/Unpaid radios, and absent from the deadline and status. The browser's own popup and blocking is standard browser behavior that the agent did not witness. **This needs the user's check.**
+5. **Server-side validation errors display correctly: partly verified.** The form-built bodies for 8 rejected scenarios (a completely empty form with native checks bypassed; Paid chosen with "Unpaid" compensation; Unpaid chosen with "Paid, $24/hr"; hybrid with no city and state; a web link method with "not a url"; an email method with "a@b"; a date posted before 2000; a deadline before 2000) were sent to the real API: every one returned HTTP 400, and `groupErrorsByField` mapped each message to exactly the expected field(s). For the empty form that is all 11 required fields, for example "Title: This field is required." Rendering those messages under the fields in a browser was **not** seen by the agent. **This needs the user's check.**
+6. **The form submits to the existing POST endpoint:** the contract test sent the exact JSON that `toRequestBody` builds to `POST /api/opportunities`. Clicking the real Save button was not driven by the agent.
+7. **A valid opportunity is saved to Neon development:** the form-built body for "Community Outreach Volunteer (Fictional Sample)" (a remote, unpaid, rolling volunteer listing; fictional data only) returned HTTP 201. A direct read of the development database shows the row stored as submitted (`remote`, no city, no deadline, `datePosted` 2026-10-15, unpaid, `active`, `source` `owner-added`, no `legacyId`). **This row was created by the contract test using the form's body builder, not by clicking the form in a browser.** It is the second sample record the user asked to keep (id `cmvadtgq70000kgitvumgz8ii`).
+8. **The browser redirects to the homepage after saving: NOT driven in a browser.** The code calls `window.location.assign("/")` after HTTP 201. **This needs the user's check.**
+9. **The new opportunity appears in the directory after refresh:** `GET /api/opportunities` returns 2 rows, and the homepage (requested fresh) renders 2 cards, "2 opportunities found", and the new card with "Rolling deadline, Volunteer, Remote, Unpaid, Active, Lived experience: Required".
+10. **The original fictional opportunity is unchanged:** the full row of `cmvabung80000uoitdge182wa` was snapshotted before and after the test and is identical on all 21 columns (same SHA-256 fingerprint). PostgreSQL's write counters rose by exactly one insert (the new row); updates and deletes did not change. Nothing was deleted or modified.
+11. **Lint and build:** `npm run lint` passes with no warnings; `npm run build` compiles successfully and lists `◐ /`, `○ /_not-found`, `○ /admin/opportunities/new` and `ƒ /api/opportunities`.
+12. **No schema changes or migrations:** `npx prisma migrate status` says "Database schema is up to date!"; the live-database-vs-schema comparison returned exit code 0 (no differences); `prisma/migrations/` has only the original migration; `_prisma_migrations` has 1 record. `prisma/` and the API are unchanged.
+- **Helper logic (pure functions):** 0 failures in each of three time zones. Covered: remote drops location text; hybrid or on-site keep city and state, and address only when typed; a blank deadline is omitted; Paid/Unpaid maps to `isPaid` (omitted when not chosen); every key of the body is one the API accepts and the body is flat; error grouping; `todayLocalDate()` is `YYYY-MM-DD` and equals the local calendar date.
+- **Failure response:** a valid form-built body sent to a production build whose database was a fake unreachable address returned HTTP 500 with only `{"error":"Could not create the opportunity."}` and none of nine sensitive strings; the form shows its own generic "...the opportunity was not saved" message for any status other than 201 or 400 (the agent read, but did not see, this message). An empty form sent in the same situation still returned HTTP 400, because validation runs before the database.
+- **Original OpenRaiz repo:** 0 changed files, commit `0113d35`, file-timestamp fingerprint matches the Step 1 baseline. Production was not touched. No credentials were printed, and a scan of this log found none.
+- **User's own browser verification (reported after the agent finished; see "User-confirmed results" below).** Before that report, nothing in the interface was recorded as verified by the user.
+
+### Checklist given to the user for their own browser check (items 3, 4, 5, 6, 8 above)
+At http://localhost:3000: (a) click "Add Opportunity" on the homepage; (b) click Save on the empty form and see the browser's "fill out this field" popup; (c) choose Work arrangement Hybrid, see City and State appear, then choose Remote and see them disappear; (d) fill every field validly with fictional data and click Save; (e) see the page go to the homepage with the new card shown; (f) refresh and see it still there. And optionally: (g) choose Paid but type "Unpaid" for compensation to see the server's message under Compensation; (h) type a deadline year before 2000 to see the Date error. Note: every successful save creates another real row in the development database.
+
+### User-confirmed results (the user's own browser test)
+After the agent's report and checklist, the user wrote: "I've personally tested the Add Opportunity form in my browser." and reported, in their own words, these results, which are recorded here as **user-confirmed** (the agent did not witness any of them):
+- Required-field validation: **PASS**
+- Hybrid/Remote conditional location fields: **PASS**
+- Server-side compensation validation: **PASS**
+- Save and redirect: **PASS**
+- New opportunity appears on homepage: **PASS**
+- Opportunity persists after refreshing: **PASS**
+
+How these map to the numbered verification items above: item 4 (native required-field validation), item 3 (Remote hides the location fields), item 5 (server-side errors displayed; the user reported the compensation case specifically, so the other server-error cases, for example the date errors, were not reported as tested by the user), items 6 and 8 (submits to the endpoint, saves, redirects to the homepage), and item 9 (the new opportunity appears and persists after a refresh).
+
+**Data left by the user's test (read by the agent afterwards, nothing changed or deleted):** the development database now holds 3 rows. The third was created by the user's own browser test: id `cmvae82zz0000pwit532gndbd`, "Social Media Fellow", organization "Alianza for Youth Justice", a remote fellowship, paid ("$25/hr"), posted 2026-10-15, deadline 2026-10-31, created at 03:13:36 UTC on 2026-10-16. The original fictional opportunity (`cmvabung80000uoitdge182wa`) is still identical (SHA-256 fingerprint `a4cf24dd6cbfe1af`, the same as before and after the agent's contract test), and the agent's second sample (`cmvadtgq70000kgitvumgz8ii`) is unchanged. PostgreSQL's insert counter rose by one for the user's save and updates and deletes did not change.
+
+### Why `useSyncExternalStore` was introduced, and whether it is necessary
+- **What happened:** the first version filled "Date posted" with today's date by calling `setState` inside a `useEffect`. `npm run lint` rejected it (React's `react-hooks/set-state-in-effect` rule: setting state straight after the first render forces an extra render). The agent replaced it with `useSyncExternalStore`, which React provides for reading a value that only the browser knows. In `components/OpportunityForm.js`: `const today = useSyncExternalStore(subscribeToNothing, todayLocalDate, getServerToday)`; the server's snapshot is `""`, the browser's is today's local date, and `datePosted` stays `null` ("not touched yet") until the person picks a date.
+- **Why a browser-only value is needed at all:** the date has to be the visitor's own calendar day. The server does not know the visitor's time zone, and it is already the next day in UTC in the evening in US Pacific time (the agent saw `2026-10-15` locally while UTC said `2026-10-16`).
+- **Is `useSyncExternalStore` necessary? No, not strictly.** It is correct and avoids both the extra render and a mismatch between the server's HTML and the browser's, but it is a more advanced hook than this feature needs, and a beginner has to read a short comment to follow it. Simpler options, with trade-offs:
+  1. **Keep it as it is.** About 3 lines plus a comment, it passes lint, and the live DOM check showed the right date with no hydration error. This is the agent's recommendation unless readability matters more to the user.
+  2. **`useEffect` plus `setState`, with a one-line lint exception comment.** This is the most common beginner pattern and about the same amount of code. It works, at the cost of one extra render and a brief moment in which the date box is empty. The lint rule is advisory here, so the exception is a legitimate choice.
+  3. **Compute today's date on the server and pass it in as a prop.** The simplest code, but it uses the server's (UTC) date, so on a US evening the default would be tomorrow's date. It also needs care with Next.js Cache Components, which have rules about reading the current time while a page is being prerendered (the agent did not test this variant).
+  4. **Initialize state directly with today's date (`useState(todayLocalDate)`).** Simplest of all but wrong here: that code also runs on the server, so the server's date would be baked into the page's HTML and could mismatch the browser (not tested in this project).
+- **Decision:** nothing was refactored. Changing this requires the user's approval.
+
+### Problems found, errors and corrections
+- **Lint error:** my first version filled "Date posted" with today's date by calling `setState` inside a `useEffect`; `npm run lint` rejected it (React's `set-state-in-effect` rule: it causes an extra render). **Corrected:** `datePosted` starts as `null` ("not touched yet") and the form shows today's local date from `useSyncExternalStore` until the visitor picks a date. After the fix the live DOM showed the right date and no hydration error.
+- **Styling bug found in my screenshot:** the Paid/Unpaid radio buttons were stacked and bold because my general `.field label` style overrode the radio style. **Corrected** with a more specific `.field .radio-option` rule and `padding: 0` on the legend; a new screenshot showed them side by side in normal weight.
+- **Weak check:** one of my first checks ("status defaults to Active") ended with `|| true`, so it could never fail. I flagged it as pending in its own output and then checked the real DOM (`<option value="active" selected>`), which passed.
+- **Raw-HTML check failed wrongly:** my check that the homepage contained the text "2 opportunities found" failed against the raw HTML because React splits the count line into separate text pieces, so that phrase is not one contiguous string in the HTML source. The page was correct. I re-checked on the visible text (and checked the new card's contents separately), and all passed.
+- **Not driven in a browser (limitation, not an error):** see items 3, 4, 5, 6 and 8.
+- **Mobile 320 px** was not re-checked for the form; 390 px was.
+- (Several automated notifications about servers I stopped on purpose were not from the user and required no action.)
+
+### Lessons learned
+- Do not claim an interface behavior is verified when it was only read in code: separate "checked in code", "checked through the API", and "seen running in a browser".
+- Keep form logic in plain functions (`toRequestBody`, `groupErrorsByField`) so it can be tested without a browser.
+- The server stays the authority on validation; the form only collects values, shows the server's messages, and uses native `required` for quick feedback.
+- A fresh page load after a save is the simplest way to guarantee the list shows the new row.
+- Dates: "Date posted" defaults to the person's **local** calendar date (2026-10-15 for the agent's Pacific time zone), while the automatic `lastUpdated` uses the **UTC** date (2026-10-16 at the same moment). In the evening the new record's `lastUpdated` can therefore be a day after its `datePosted`. This is how the model was designed (Step 2.7) and nothing was changed.
+
+### Security notes
+The form page and `POST /api/opportunities` have **no authentication**. They are for local development only and must not be deployed publicly until sign-in and authorization exist; the form page says so on screen and in the code. Not done in this step (possible later hardening): disabling the page and the POST endpoint in production until authentication exists, a request-size limit, rate limiting.
+
+### Data in the Neon development database after the agent's tests (none deleted)
+1. `cmvabung80000uoitdge182wa` "Youth Policy Fellow (Fictional Test Listing)", unchanged.
+2. `cmvadtgq70000kgitvumgz8ii` "Community Outreach Volunteer (Fictional Sample)", the second sample kept at the user's request.
+3. `cmvae82zz0000pwit532gndbd` "Social Media Fellow" (Alianza for Youth Justice), created later by the user's own browser test (see "User-confirmed results"). Not created by the agent and not deleted.
+
+### Follow-up prompt
+2. ```
+   I've personally tested the Add Opportunity form in my browser.
+   My verification results:
+   - Required-field validation: PASS
+   - Hybrid/Remote conditional location fields: PASS
+   - Server-side compensation validation: PASS
+   - Save and redirect: PASS
+   - New opportunity appears on homepage: PASS
+   - Opportunity persists after refreshing: PASS
+   Please record these as user-confirmed results in PROMPT_LOG.md.
+   Also document that useSyncExternalStore was introduced to resolve the date-default lint issue. Briefly explain whether it is necessary or whether a simpler implementation would be appropriate. Do not refactor without my approval.
+   Approved commit message:
+   Add Opportunity form page with server-validated submission
+   Before committing:
+   1. Verify only the six approved files are staged.
+   2. Review the staged diff.
+   3. Confirm no credentials or environment files are included.
+   4. Confirm the original OpenRaiz repository remains unchanged.
+   If all checks pass, commit and push to origin/main.
+   Provide the commit hash and confirm the push succeeded.
+   Afterward, prepare a plan for Step 5.1: Implementing the PATCH endpoint to update existing opportunities.
+   Do not implement PATCH yet. Wait for my approval.
+   ```
+   → The agent recorded the user-confirmed results and the `useSyncExternalStore` explanation (above), checked the database for what the user's test left behind, ran the pre-commit checks, and committed and pushed.
+
+### Git
+- **Files committed (six, approved by the user):** `components/OpportunityForm.js`, `app/admin/opportunities/new/page.js`, `lib/opportunityOptions.js`, `app/page.js`, `app/globals.css` and `PROMPT_LOG.md`.
+- **Commit message (approved):** `Add Opportunity form page with server-validated submission` (no Co-Authored-By trailer).
+- **Pre-commit checks (agent, on the staged files):** exactly the six approved files staged; no `.env`, generated, build, package or database files staged; a scan of the staged diff found no credential, hostname or endpoint parts; the original OpenRaiz repo unchanged (0 changed files, commit `0113d35`).
+- **Commit reference:** PENDING — the hash is not known until the commit exists; to be recorded in a later log update.

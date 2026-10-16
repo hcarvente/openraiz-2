@@ -1,6 +1,7 @@
 // The homepage. Everything in this file is a Server Component: it runs on the server,
 // reads the database through Prisma, and sends finished HTML to the browser.
 import { Suspense } from "react";
+import Link from "next/link";
 import SiteHeader from "@/components/SiteHeader";
 import OpportunityCard from "@/components/OpportunityCard";
 import { prisma } from "@/lib/prisma";
@@ -53,7 +54,12 @@ export default function Home() {
     <>
       <SiteHeader />
       <main className="page-main">
-        <h1>Opportunities</h1>
+        <div className="page-title-row">
+          <h1>Opportunities</h1>
+          <Link className="button button-primary" href="/admin/opportunities/new">
+            Add Opportunity
+          </Link>
+        </div>
         <p className="page-intro">Explore jobs, internships, fellowships, and volunteer opportunities.</p>
         <Suspense fallback={<p className="state-message">Loading opportunities&hellip;</p>}>
           <OpportunityList />
