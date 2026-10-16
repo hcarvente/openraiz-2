@@ -1,13 +1,14 @@
 "use client";
 
-// The opportunity form. It is a Client Component because it needs to react to typing and
-// clicking in the browser. It never touches the database: it sends the values as JSON to
-// POST /api/opportunities, and the server does all the validating and saving.
+// The opportunity form, used to add a new opportunity and to edit an existing one. It is a Client
+// Component because it needs to react to typing and clicking in the browser. It never touches the
+// database: it sends JSON to the API, and the server does all the validating and saving.
+//
+//   mode="create" (the default): sends the whole form to POST /api/opportunities.
+//   mode="edit":   starts from `initialValues` (the saved opportunity) and sends only the fields that
+//                  changed to PATCH /api/opportunities/[opportunityId].
 //
 // LOCAL DEVELOPMENT ONLY: there is no sign-in yet, so this form must not be deployed publicly.
-//
-// Built to be reused for editing later: `initialValues` fills the form, and the place where the
-// request is sent (see handleSubmit) is the only part that will differ for an edit.
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import {
@@ -22,6 +23,7 @@ import {
   groupErrorsByField,
   showsLocationFields,
   todayLocalDate,
+  toPatchBody,
   toRequestBody,
 } from "@/lib/opportunityOptions";
 
@@ -66,10 +68,16 @@ function Field({ name, label, required, hint, error, wide, children }) {
 const subscribeToNothing = () => () => {};
 const getServerToday = () => "";
 
-export default function OpportunityForm({ initialValues, submitLabel = "Save Opportunity", successRedirectTo = "/" }) {
-  const [values, setValues] = useState({ ...emptyOpportunityValues(), ...initialValues });
+export default function OpportunityForm({ mode = "create", opportunityId, initialValues, submitLabel, successRedirectTo = "/" }) {
+  const isEdit = mode === "edit";
+  const buttonLabel = submitLabel ?? (isEdit ? "Save Changes" : "Save Opportunity");
+  const [values, setValues] = useState(() => ({ ...emptyOpportunityValues(), ...initialValues }));
+  // In edit mode this is the saved opportunity as it was when the page loaded: what the changes are compared against.
+  const [originalValues] = useState(() => ({ ...emptyOpportunityValues(), ...initialValues }));
   const [fieldErrors, setFieldErrors] = useState({}); // { fieldName: "message" } from the server
   const [formError, setFormError] = useState(""); // a general message shown at the top
+  const [formNotice, setFormNotice] = useState(""); // a neutral note, such as "No changes to save."
+  const [opportunityGone, setOpportunityGone] = useState(false); // the opportunity being edited no longer exists
   const [isSubmitting, setIsSubmitting] = useState(false);
   const summaryRef = useRef(null);
 
@@ -84,6 +92,7 @@ export default function OpportunityForm({ initialValues, submitLabel = "Save Opp
   }, [formError]);
 
   function setValue(name, value) {
+    setFormNotice("");
     setValues((current) => ({ ...current, [name]: value }));
   }
 
@@ -93,21 +102,40 @@ export default function OpportunityForm({ initialValues, submitLabel = "Save Opp
     event.preventDefault();
     if (isSubmitting) return; // a second click or Enter press while saving does nothing
 
+    const currentValues = { ...values, datePosted: datePostedValue };
+
+    // Edit mode sends only what changed. If nothing did, there is nothing to send.
+    let request;
+    if (isEdit) {
+      const changes = toPatchBody(originalValues, currentValues);
+      if (Object.keys(changes).length === 0) {
+        setFormError("");
+        setFieldErrors({});
+        setFormNotice("No changes to save.");
+        return;
+      }
+      request = { url: `/api/opportunities/${encodeURIComponent(opportunityId)}`, method: "PATCH", body: changes, successStatus: 200 };
+    } else {
+      request = { url: "/api/opportunities", method: "POST", body: toRequestBody(currentValues), successStatus: 201 };
+    }
+    const savedWords = isEdit ? "the changes were not saved" : "the opportunity was not saved";
+
     setIsSubmitting(true);
     setFormError("");
+    setFormNotice("");
     setFieldErrors({});
+    setOpportunityGone(false);
 
     try {
-      // For an edit, this is the part that would change (PATCH /api/opportunities/[id]).
-      const response = await fetch("/api/opportunities", {
-        method: "POST",
+      const response = await fetch(request.url, {
+        method: request.method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(toRequestBody({ ...values, datePosted: datePostedValue })),
+        body: JSON.stringify(request.body),
       });
 
-      if (response.status === 201) {
-        // Saved. A full page load makes the server read the database again, so the new
-        // opportunity is on the homepage. The button stays disabled while the browser navigates.
+      if (response.status === request.successStatus) {
+        // Saved. A full page load makes the server read the database again, so the homepage shows the
+        // new or changed opportunity. The button stays disabled while the browser navigates.
         window.location.assign(successRedirectTo);
         return;
       }
@@ -118,11 +146,14 @@ export default function OpportunityForm({ initialValues, submitLabel = "Save Opp
         setFormError("Please fix the problems below. Nothing has been saved yet.");
       } else if (response.status === 400 && data && typeof data.error === "string") {
         setFormError(data.error);
+      } else if (isEdit && response.status === 404) {
+        setOpportunityGone(true);
+        setFormError("This opportunity no longer exists, so your changes were not saved.");
       } else {
-        setFormError("Something went wrong on our end, and the opportunity was not saved. Please try again.");
+        setFormError(`Something went wrong on our end, and ${savedWords}. Please try again.`);
       }
     } catch {
-      setFormError("We couldn't reach the server, and the opportunity was not saved. Please try again.");
+      setFormError(`We couldn't reach the server, and ${savedWords}. Please try again.`);
     }
     setIsSubmitting(false);
   }
@@ -136,6 +167,11 @@ export default function OpportunityForm({ initialValues, submitLabel = "Save Opp
       {formError ? (
         <div className="form-summary" role="alert" tabIndex={-1} ref={summaryRef}>
           <p>{formError}</p>
+          {opportunityGone ? (
+            <p>
+              <Link href={successRedirectTo}>Back to opportunities</Link>
+            </p>
+          ) : null}
           {errorEntries.length > 0 ? (
             <ul>
               {errorEntries.map(([field, message]) => (
@@ -146,6 +182,12 @@ export default function OpportunityForm({ initialValues, submitLabel = "Save Opp
             </ul>
           ) : null}
         </div>
+      ) : null}
+
+      {formNotice ? (
+        <p className="form-notice" role="status">
+          {formNotice}
+        </p>
       ) : null}
 
       <p className="form-note">
@@ -373,7 +415,7 @@ export default function OpportunityForm({ initialValues, submitLabel = "Save Opp
           Cancel
         </Link>
         <button className="button button-primary" type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Saving…" : submitLabel}
+          {isSubmitting ? "Saving…" : buttonLabel}
         </button>
       </div>
     </form>

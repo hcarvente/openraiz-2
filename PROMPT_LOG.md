@@ -2673,4 +2673,217 @@ The route handler docs for this Next.js version (16.4.1) show that for a dynamic
 - **Files committed (three, approved by the user):** `app/api/opportunities/[id]/route.js`, `lib/validateOpportunityUpdate.js` and `PROMPT_LOG.md`.
 - **Commit message (approved):** `Add PATCH /api/opportunities/[id] endpoint with merged validation` (no Co-Authored-By trailer).
 - **Pre-commit checks (agent):** the staged diff was reviewed; exactly the three approved files staged; no `.env`, generated, build, package or binary files, and no database connection information in the staged diff (a scan found no credential, hostname or endpoint parts); `npm run lint` and `npm run build` pass; the four development database records are intact (the three earlier ones have the same fingerprints as at the start of Step 5.1B, and the PATCH test record is unchanged since the end of that step); the original OpenRaiz repo unchanged (0 changed files, commit `0113d35`).
+- **Commit reference:** `24f274391441f6bdcfe5463d6d1fe803889ad213` (short `24f2743`), 3 files changed (`app/api/opportunities/[id]/route.js`, `lib/validateOpportunityUpdate.js`, `PROMPT_LOG.md`; 354 insertions, 4 deletions); pushed to `origin/main`; `git ls-remote origin main` returned the same hash, the remote tree lists both code files, and the working tree was clean afterwards. Recorded here during Step 5.2.
+
+---
+
+## Milestone 5, Step 5.2 — Edit Opportunity interface
+
+- **Date:** 2026-10-16 (UTC)
+- **Objective:** Let the user click Edit on an opportunity card, see its saved information in a form, change it and save through the existing `PATCH /api/opportunities/[id]` endpoint. No DELETE, no search or filters, no change to the API, the validators or the schema, and **no database writes during testing** (the user will verify saving in their own browser).
+- **Previous commit:** `24f2743` (`Add PATCH /api/opportunities/[id] endpoint with merged validation`).
+
+### Exact prompt
+1. ```
+   I approve Milestone 5, Step 5.2: Building the Edit Opportunity interface.
+   Approved decisions
+   1. PATCH requests should include only fields that changed.
+   2. Use the showAdminActions prop to control visibility of Edit links.
+   3. Load the existing opportunity directly through Prisma in the Server Component.
+   4. Create a friendly not-found page.
+   5. Do not perform database writes during your testing. I will verify saving through my browser.
+   6. Simplify validation messages displayed in the form, while preserving their meaning.
+   Objective
+   Allow me to click Edit on an opportunity card, review its existing information, make changes, and save those changes through our existing PATCH API.
+   Step 1 — Edit page
+   Create:
+   app/admin/opportunities/[id]/edit/page.js
+   Use the installed Next.js version's conventions for asynchronous route parameters and Suspense.
+   The page should:
+   - Retrieve the selected opportunity through Prisma.
+   - Convert it with our existing serializer.
+   - Display the opportunity's title.
+   - Render the reusable OpportunityForm with its existing values.
+   - Display a local-development-only notice.
+   - Return a 404 when the opportunity doesn't exist.
+   Create a small, branded not-found page:
+   app/admin/opportunities/[id]/edit/not-found.js
+   Step 2 — Reuse OpportunityForm
+   Modify:
+   components/OpportunityForm.js
+   Add support for:
+   - mode="edit".
+   - An existing opportunity ID.
+   - Initial values from the saved opportunity.
+   - A Save Changes button.
+   - Submitting changes through PATCH /api/opportunities/[id].
+   Preserve Create mode and its existing POST behavior.
+   Step 3 — Update helpers
+   Modify:
+   lib/opportunityOptions.js
+   Add helpers to:
+   - Convert saved opportunity data into form values.
+   - Compare original and current form values.
+   - Build a PATCH request containing only changed fields.
+   - Send explicit null values when clearing optional fields.
+   - Clear city, state, and address when switching to Remote.
+   If no fields have changed, show "No changes to save." without making an API request.
+   Step 4 — Edit links
+   Modify:
+   components/OpportunityCard.js
+   Add a small Edit link controlled by showAdminActions.
+   Its accessible name should include the opportunity title.
+   Update app/page.js to enable the link for our local development demonstration.
+   Step 5 — Styling
+   Update app/globals.css using the existing OpenRaiz branding and approved mockup.
+   Keep the form responsive and accessible.
+   Do not introduce new styling libraries.
+   Step 6 — Error handling
+   - Display field-specific validation errors.
+   - Preserve entered information after failed submissions.
+   - Display a clear message when an opportunity no longer exists.
+   - Show generic messages for unexpected failures.
+   - Never expose database credentials or internal errors.
+   Step 7 — Verification
+   Perform read-only and non-persistent tests:
+   1. Verify edit pages load for the four existing development opportunities.
+   2. Verify fields are prefilled correctly.
+   3. Verify Edit links point to the correct pages.
+   4. Verify unknown IDs display the not-found page.
+   5. Test the PATCH body-building helper without writing to the database.
+   6. Verify changing to Remote includes the required null values.
+   7. Verify unchanged fields are omitted.
+   8. Confirm Create mode remains functional.
+   9. Run lint and build checks.
+   10. Confirm the database still has four opportunities.
+   11. Confirm no schema changes or migrations occurred.
+   12. Confirm the original OpenRaiz repository remains unchanged.
+   Do not execute actual PATCH requests during testing.
+   Do not create, modify, or delete database records.
+   I will test saving changes through my browser after you finish.
+   Step 8 — Documentation
+   Update PROMPT_LOG.md with:
+   - This exact prompt.
+   - Files created and modified.
+   - Verification results.
+   - Errors or corrections.
+   - The previous commit reference 24f2743.
+   Do not claim that I've personally tested the Edit interface until I confirm it.
+   Step 9 — Git
+   After verification:
+   - Show the modified files.
+   - Propose a descriptive commit message.
+   - Wait for my approval before committing or pushing.
+   Important boundaries
+   Do not implement DELETE.
+   Do not add search or filtering.
+   Do not modify the API or validation rules.
+   Do not modify the Prisma schema.
+   Do not modify the original OpenRaiz repository.
+   Stop after completing Step 5.2.
+   ```
+   (The user's messages before this one: the agent's Step 5.2 plan and six questions were given in chat after commit `24f2743`; the user replied `pause`, and then sent this prompt, which contains the answers. During the pause the agent changed nothing.)
+
+### Reading the bundled Next.js docs first
+- A dynamic page's `params` is a Promise; with Cache Components it is runtime data, and the docs recommend passing the promise down and awaiting it **inside** `<Suspense>`.
+- `notFound()` from `next/navigation` renders the segment's `not-found.js`. **Status codes:** "Before streaming starts, Next.js returns a 404 status code. After streaming starts, the status code remains 200 and the not-found UI renders in the response", with a `noindex` tag added. The idiomatic pattern in this version (a lookup inside `<Suspense>`) therefore shows the not-found page with HTTP **200**, not 404.
+
+### Files created or modified
+- **Created:** `app/admin/opportunities/[id]/edit/page.js` (the edit page), `app/admin/opportunities/[id]/edit/not-found.js` (the branded not-found page).
+- **Modified:** `components/OpportunityForm.js` (edit mode), `lib/opportunityOptions.js` (new helpers), `components/OpportunityCard.js` (Edit link), `app/page.js` (turns the link on), `app/globals.css` (styles appended), `PROMPT_LOG.md` (this entry and the `24f2743` reference).
+- **Unchanged (verified with `git diff --quiet`):** all of `app/api/`, `lib/validateOpportunity.js`, `lib/validateOpportunityUpdate.js`, `lib/serializeOpportunity.js`, `lib/prisma.js`, `prisma/` (schema and migration), `package.json`, `package-lock.json`. No DELETE, no search or filters, no new dependencies.
+- **Temporary files:** screenshots and a throwaway compiled copy of the card used for one test were kept only in `.next/preview/` (a git-ignored build folder, wiped by every production build); none is part of any commit.
+
+### What the code does
+- **`lib/opportunityOptions.js`:**
+  - `valuesFromOpportunity(opportunity)` turns a saved opportunity (the API's flat JSON) into the form's values: text as is, `isPaid` into the Paid/Unpaid radio choice, `null` city/state/address/deadline into empty text, dates as `YYYY-MM-DD` text.
+  - `toPatchBody(originalValues, currentValues)` normalizes both sets of values the way the API stores them (trimmed text; an empty optional value as `null`; `isPaid` as true/false; city, state and address as `null` unless the opportunity is hybrid or on-site) and returns **only the fields whose value differs**. So clearing a deadline sends `{"deadline": null}`, switching to Remote sends `locationType` plus `city`, `state` and `address` as `null` (even if text is still sitting in those hidden boxes), and an untouched form gives `{}`.
+  - `simplifyErrorMessage` rewrites the API's technical wording in plain words, keeping the meaning (for example `Says the role is paid, but isPaid is false.` becomes `The compensation says paid, but "Unpaid" is selected.`; `Must be a real calendar date written as YYYY-MM-DD (years 2000 to 2100).` becomes `Must be a real date between 2000 and 2100.`; `hybrid and onsite` becomes `hybrid and on-site`; the update endpoint's note `(This is the value currently saved; include this field in the request to change it.)` is removed; unknown messages pass through unchanged). `groupErrorsByField` now applies it, so it also affects the Add form's messages (the user asked for simplified messages in the form).
+- **`components/OpportunityForm.js`:** new props `mode` (`"create"` by default, or `"edit"`), `opportunityId`, `initialValues` and an optional `submitLabel` (default "Save Opportunity", or "Save Changes" in edit mode). **Create mode is unchanged:** it still builds the whole body with `toRequestBody` and sends `POST /api/opportunities`, expecting 201. **Edit mode** keeps the original values from page load, and on submit builds `toPatchBody(original, current)`: if it is empty, it shows the note "No changes to save." (a neutral message, announced politely) and sends **nothing**; otherwise it sends `PATCH /api/opportunities/<id>` with only the changes and expects 200. After a successful save it does a full page load of the homepage (so the homepage re-reads the database). On 400 it shows each message under its field and a summary; on 404 it says "This opportunity no longer exists, so your changes were not saved." with a link back; on anything else (or a network failure) it shows a generic "…and the changes were not saved. Please try again." The form never resets its state on a failure, so everything typed is kept.
+- **`components/OpportunityCard.js`:** new prop `showAdminActions` (default **false**). When true, a small outlined "Edit" link appears at the bottom right of the card, pointing to `/admin/opportunities/<id>/edit`, with the accessible name "Edit <title>". Without the prop the card is unchanged.
+- **`app/page.js`:** passes `showAdminActions` to every card, with a comment that this is for the local demo only and must be removed or restricted to signed-in administrators before the directory is shown to the public (there is no sign-in yet).
+- **`app/admin/opportunities/[id]/edit/page.js`:** a Server Component. The page (header, back link, `<Suspense>` with a "Loading opportunity…" placeholder) passes `params` down; inside the boundary it awaits `params`, treats an id that cannot exist (letters, digits, hyphens and underscores only, at most 100 characters; the same rule as the API) as not found without asking the database, otherwise reads the opportunity with `prisma.opportunity.findUnique`, calls `notFound()` if there is none, converts it with `serializeOpportunity`, and shows "Edit Opportunity", "Editing <title>", the local-development-only notice and the form in edit mode with `valuesFromOpportunity(saved)`. If the database cannot be reached it shows a plain message ("We couldn't load this opportunity right now…") and logs only the error's name and code.
+- **`app/admin/opportunities/[id]/edit/not-found.js`:** a branded page with the OpenRaiz header, "Opportunity not found", a short explanation and a green "Back to opportunities" button.
+- **`app/globals.css`:** an action row in the card footer (pills on the left, Edit on the right), a small button size, the neutral "No changes to save." note, and a link style inside the error summary, using the original palette.
+
+### Commands executed
+- Reading docs and the existing files; `npm run lint` (several times); `npm run build` (three times, each preceded by stopping the dev server because both use the `.next` folder)
+- `npm --prefix <project folder> run dev` (background dev server, restarted after each build); `curl` and Node `fetch` requests (GET only, plus one invalid POST)
+- Read-only Node scripts using `pg` and Prisma (`findMany`): baseline and final snapshots of all four records using PostgreSQL's hidden row columns `xmin` (the last transaction to write the row) and `ctid` plus a content hash, row counts, write counters, and field-by-field reads
+- Helper and validator checks: inline Node scripts that read the real stored records through Prisma, build form values and PATCH bodies with the new helpers, and pass those bodies to the real `validateOpportunityUpdate` (a function, so nothing is sent or written), under `TZ=America/Los_Angeles`, `UTC` and `Pacific/Kiritimati`
+- `typescript.transpileModule` (the TypeScript compiler already installed) to compile the card once and render it with `react-dom/server`, with and without `showAdminActions`
+- Headless Chrome (`--headless=new`, throwaway profiles in `.next/preview/`, not the user's profile): `--dump-dom` with console logging for eight page loads, and `--screenshot` at desktop width and in a 390 px frame
+- `DATABASE_URL="postgresql://nobody:notarealpassword@127.0.0.1:1/nodb" npx next start -p 3001` (a production build with a **fake, unreachable** address, to test the error state; no real credential involved) and `npx next start -p 3002` (the production build against the real development database, GET requests and one invalid POST only); `pkill` of servers I started
+- `npx prisma migrate status`, `npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code`; `git status`, `git diff --quiet`; in the original repo `git status --short`, `git rev-parse --short HEAD` and the file-timestamp fingerprint
+- **No PATCH request of any kind was sent** (not even an invalid one), **no POST that could create a row, and no database write, direct or through the API.**
+
+### Verification results (only what actually ran), numbered as in the prompt
+1. **Edit pages load for the four existing development opportunities:** `GET /admin/opportunities/<id>/edit` returned HTTP 200 for each of `cmvabung80000uoitdge182wa`, `cmvadtgq70000kgitvumgz8ii`, `cmvae82zz0000pwit532gndbd` and `cmvafb1lx0000oait161gtpzf`, with the heading "Edit Opportunity", the record's title, the local-development-only notice, a "Save Changes" button and a Cancel link. This held in the development server and in a production build.
+2. **Fields are prefilled correctly:** for each of the four records, every form control was read from the server HTML **and** from the live DOM after the page's JavaScript ran (headless Chrome), and compared with a direct read of the database: title, organization, description, type, relevance, work arrangement, application method and value, status, the Paid/Unpaid radio, compensation, date posted (the saved date, not today's), deadline (blank for the rolling record), and city, state and address (shown and filled for the two hybrid records, absent for the two remote ones). 0 mismatches in either view. No database or credential text appears in the HTML.
+3. **Edit links point to the correct pages:** the homepage shows 4 cards with exactly one Edit link each, `href` `/admin/opportunities/<that card's id>/edit`, visible text "Edit" and accessible name "Edit <title>" (for example "Edit Youth Policy Fellow (Fictional Test Listing)"). Rendering the card on its own, with and without `showAdminActions`, shows: without the prop there is no Edit link and no admin address in the card; with it there is an Edit link to `/admin/opportunities/<id>/edit` whose accessible name includes the title (correctly escaped); apart from that link the card is identical. There is no Delete control anywhere.
+4. **Unknown ids display the not-found page:** a well-formed id that does not exist, a null byte, a space, 101 and 5,000 characters, SQL-looking text and an upper-case copy of a real id all show the branded "Opportunity not found" page, with no form, a `noindex` tag, and a link back to the homepage; the hydrated page has exactly one OpenRaiz header. **Important: every one of these returns HTTP 200, not 404.** The user's prompt asks for a 404 when the opportunity does not exist; the page does show the not-found page, but in this version of Next.js the status of a streamed page is fixed at 200 once streaming has started (see "Problems found" for how this was decided, and the options).
+5. **The PATCH body-building helper, tested without writing:** with real records, 53 checks per time zone, 0 failures in each of three time zones. For every one of the four records: saved values to form values keep every text field exactly; an untouched form gives an empty body (so no request would be sent); adding only surrounding spaces still gives an empty body.
+6. **Changing to Remote includes the required nulls:** hybrid to remote gives `{"locationType":"remote","city":null,"state":null,"address":null}`, and the same even when text is still in the hidden city, state and address boxes. Remote to hybrid with a city and state sends them; without them only the arrangement is sent, so the server names city and state. Text typed into hidden location boxes on a remote record is never sent. Hybrid to on-site sends only the arrangement.
+7. **Unchanged fields are omitted:** one edited field gives exactly that field; three edited fields give exactly those three; a field changed and then set back to its original value is omitted; the body never contains `id`, `legacyId`, `createdAt`, `lastUpdated`, `source` or the form-only `paid` key. Clearing the deadline gives `{"deadline":null}`, clearing the address gives `{"address":null}`, paid to unpaid gives `isPaid` and `compensation` together.
+- **What the real update validator says about those bodies (a function call against the real stored records; no request was sent):** one edited field, clearing the deadline, clearing the address, hybrid to remote with the nulls, remote to hybrid with city and state, and paid to unpaid together are all accepted; remote to hybrid without city and state is rejected naming `city` and `state`; choosing Unpaid while the compensation still says "Paid, $25/hr" is rejected on `compensation`; clearing the title, clearing the city on a hybrid record, a bad link and a date before 2000 are each rejected on the right field.
+- **Simplified messages:** the API's wording `Says the role is paid, but isPaid is false. (This is the value currently saved; include this field in the request to change it.)` appears in the form as `The compensation says paid, but "Unpaid" is selected.`; a date error reads `Must be a real date between 2000 and 2100.`; "This field is required." and "Must be a valid email address." are unchanged; a message the helper does not know passes through unchanged.
+8. **Create mode remains functional (read-only evidence):** the Add Opportunity page loads in both the development server and a production build as an empty form with no choices made, the button "Save Opportunity" (not "Save Changes"), and today's local date in "Date posted"; the create helper `toRequestBody` still drops stale location text for remote, omits a blank deadline, maps `isPaid`, and includes every required field; the create code path in the form is the same code as before (`POST`, expecting 201). An **invalid** POST returned HTTP 400 with 11 field errors, so the endpoint the Add form calls is alive and validating. **A valid POST was not sent, because that would create a row;** so the Add form's saving was not re-tested in this step (the user confirmed it themselves in Step 4.2, before these changes).
+9. **Lint and build:** `npm run lint` passes with no warnings; `npm run build` compiles successfully and lists `◐ /` (partial prerender), `○ /admin/opportunities/new`, `◐ /admin/opportunities/[id]/edit`, `ƒ /api/opportunities` and `ƒ /api/opportunities/[id]`.
+10. **The database still has four opportunities, and none was touched:** a snapshot taken before any check and one taken after everything (including the production-build runs) are identical for all four records on `xmin`, `ctid` and content hash: no transaction wrote to any row. PostgreSQL's write counters are still 51 inserts, 24 updates and 2 deletes, the same as at the start of the step.
+11. **No schema changes or migrations:** `npx prisma migrate status` says "Database schema is up to date!"; the live-database-vs-schema comparison returned exit code 0 (no differences); `prisma/migrations/` has only the original migration; `_prisma_migrations` has 1 record.
+12. **Original OpenRaiz repo:** 0 changed files, commit `0113d35`, file-timestamp fingerprint matches the Step 1 baseline. Production was not touched. No credentials were printed, and a scan of this log found none.
+- **Error state:** a production build with a fake unreachable database shows the edit page with the plain message "We couldn't load this opportunity right now. Please try again in a moment." announced as an alert, no form, the header and back link still present, and nothing sensitive anywhere in the HTML; the server console logs only `Edit page could not load the opportunity: PrismaClientKnownRequestError P1001`. An impossible id in the same situation still shows the not-found page without touching the database, and the Add page still loads.
+- **Browser console:** across eight page loads in headless Chrome after the final change (the four edit pages, the Add page, two not-found pages and the homepage), the only page messages were the dev server's "[HMR] connected" and React's "Download the React DevTools" notice; no hydration error, no React warning, and no Next.js warning (see Problems for one that was found and fixed).
+- **Visual review by the agent (not by the user):** screenshots from headless Chrome at desktop width show: the homepage with a small outlined Edit button at the bottom right of every card beside the pills, and the "Add Opportunity" button at the top; the edit page as the same branded white form card as the Add page, filled with the record's values, with the subtitle "Editing <title>" and the local-only notice; and the not-found page with the sprout header, a clear message and a green "Back to opportunities" button. **Not visually confirmed:** the edit page at phone width (two attempts caught only the loading placeholder, the same streaming-timing problem as before; the form uses the same responsive CSS as the Add page, which was confirmed at 390 px in Step 4.2).
+- **NOT verified by the agent (no browser-driving tool was available, and no writes were allowed):** clicking Edit and arriving on the page; typing in the form; the "No changes to save." note actually appearing; the Remote/Hybrid switch hiding and showing the location fields on the edit page; submitting with Save Changes; the redirect to the homepage and the updated card; server errors appearing under the fields with typed values kept; the "no longer exists" message; the button disabling while saving. These all depend on code the agent read and on helpers it tested, but did not watch run. **At the time of the agent's report the user had not yet confirmed any of them; the user's later, general confirmation is recorded under "User-confirmed result" below.**
+
+### Checklist given to the user for their own browser check
+At http://localhost:3000 (edits are saved, so use the **PATCH test record**, "PATCH Test Opportunity (Fictional)", or tell the agent which record to use): (a) click Edit on a card; (b) check the form shows the saved values; (c) click Save Changes without changing anything: "No changes to save."; (d) change one field (for example the title) and save: you land on the homepage and the card shows the change; (e) edit the record again and set the work arrangement to Remote and save (the city, state and address are cleared); then switch back to Hybrid with a city and state; (f) choose Unpaid while the compensation still says "Paid…" and save: the message appears under Compensation and everything you typed is still there; (g) click Cancel; (h) open `/admin/opportunities/doesnotexist1/edit` to see the not-found page. Every successful save changes the real development record.
+
+### User-confirmed result (the user's own browser test)
+After the agent's report and checklist, and a pause, the user wrote: `Edit flow works, commit and push it`. This is recorded as **user-confirmed: the Edit flow works.** The user did not list which checklist items they tried or what they saw, so only that overall statement is recorded; no individual item is recorded as confirmed. The user also did not comment on the agent's note that a missing opportunity shows the not-found page with HTTP status 200 instead of 404 (see Problems); the step was committed as it stands.
+
+**What the user's testing left in the database (read afterwards by the agent, read-only; nothing was changed by the agent):** the development database still holds 4 opportunities. The three earlier records are unchanged on every check (same `xmin` transaction ids and content hashes as at the start of the step). Only the PATCH test record, `cmvafb1lx0000oait161gtpzf` ("PATCH Test Opportunity (Fictional)"), changed, through the user's own use of the Edit page: its type went from job to **internship**, its lived-experience relevance from welcomed to **preferred**, its work arrangement from hybrid to **remote** with `city`, `state` and `address` now empty (they had been Oakland, CA and a street address), and its deadline from 2026-12-15 to **2026-12-31**; its title, organization, compensation ("Paid, $25/hr"), paid status, date posted (2026-10-15), application method and status are unchanged, and `lastUpdated` is 2026-10-16. That is what a successful edit that switches an opportunity to Remote should leave behind (the form sends the cleared city, state and address as explicit nulls). PostgreSQL's write counters showed 51 inserts, 25 updates and 2 deletes at the time of the check (they were 51/24/2 at the start of the step; the counters can lag by a few seconds). Nothing was deleted. The user may want to restore that record before the next step.
+
+### Problems found, errors and corrections
+- **A real finding from the browser console, fixed (a design decision).** My first version of the edit page awaited `params` at the top of the page (outside `<Suspense>`) so that an id that cannot exist would return a **real HTTP 404** before streaming. Headless Chrome's console then showed, in the development server, Next.js's error-level message: `Route "/admin/opportunities/[id]/edit": Next.js encountered runtime data during prerendering … params … accessed outside of <Suspense> prevents the route from being prerendered, blocking the page load` (it appeared in 2 of 4 page loads). That conflicts with the convention the user asked me to follow ("the installed Next.js version's conventions for asynchronous route parameters and Suspense"), and in a developer's browser it can show up as an issue indicator that would confuse their own testing. **Correction:** the page now passes the `params` promise down and awaits it inside `<Suspense>`, as the docs recommend; the console is clean afterwards. **Consequence (a deviation from the prompt):** impossible-shaped ids no longer get a real 404; **every not-found case now shows the not-found page with HTTP status 200** and a `noindex` tag, which is exactly how this Next.js version behaves for a lookup inside `<Suspense>`. A true 404 status would need a check before streaming starts (for example in Next.js's Proxy file) or the "blocking route" option the warning mentions (`export const instant = false`), neither of which was chosen without the user's approval. The user can decide whether a real 404 status matters for this project.
+- **A false alarm in my own prefill check (4 false failures):** my first parser treated an attribute written as `selected=""` or `checked=""` as "not set" (an empty string is falsy in JavaScript), so every dropdown and the radio looked unselected. After fixing the check, all four pages matched the database on every field. The page was right; my reading of it was wrong.
+- **A counting mistake in my own check:** the "4 Edit buttons" check also counted the class name inside the page's embedded data scripts (8 instead of 4). Counting only the real page gives 4 cards, 4 Edit links and the Add button.
+- **A too-narrow noise filter:** my first console check reported "errors" that were Chrome's own macOS display and network messages (`CVDisplayLink…`, a `spdy_session` warning), and then I confused React's INFO-level DevTools notice for a problem. Listing every distinct `CONSOLE:` message from all page loads showed only HMR, the DevTools notice, and (before the fix above) the Next.js runtime-data message.
+- **A failed edit script that changed nothing:** my first attempt to update the form searched for the loading label as the text `\u2026`, but the file stores the actual `…` character; the script stopped before writing, the form file was unchanged, and I reran it with the right text.
+- **Screenshots wiped by a build:** each production build deletes the `.next` folder, including the saved screenshots, so I retook them.
+- **Phone-width screenshots of the edit page** kept catching the loading placeholder (timing); not confirmed (see above).
+- **A third copy of the id rule:** the "letters, digits, hyphens and underscores, at most 100" rule now exists in `app/api/opportunities/[id]/route.js` and in the edit page. It was not extracted into a shared file, to keep this step small; it could be unified later.
+- (Several automated notifications about servers I stopped on purpose were not from the user and required no action.)
+
+### Known limits, stated plainly
+- **No authentication.** The Edit links, the edit page and the PATCH endpoint are for local development only. `showAdminActions` is on for the homepage; it must be turned off, or restricted to signed-in administrators, before the directory is shown to the public.
+- **HTTP 200 for a missing opportunity** (see above).
+- **Two people editing the same record at the same moment** could overwrite each other's changes to the same fields (only the fields each person changed are sent, which limits the damage).
+- **The edit form's "Date posted"** shows the saved date; the automatic `lastUpdated` still uses the UTC date, as designed in Step 2.7.
+- The form shows an error for a problem in a saved value only when the user's changes make it relevant; none of the four current records breaks a rule.
+
+### Lessons learned
+- Read the browser console as well as the page: it showed a Next.js convention warning that no page content revealed.
+- Streaming has a price: once a page starts streaming, its HTTP status is fixed, so "show a not-found page" and "return a 404 status" can be different things.
+- Send only what changed in a PATCH, compare normalized values (trimmed text, `null` for empty optional values), and let "nothing changed" mean "send nothing".
+- When a check fails, first ask whether the check is wrong (three of this step's failures were mistakes in my own scripts).
+
+### Security notes
+The Edit interface and `PATCH /api/opportunities/[id]` have no authentication and are local-only; the edit page says so on screen, and the comments in the code say so. Error messages shown in the form are plain words, and no database detail, credential or internal error is ever shown (the server logs only an error's name and code).
+
+### Follow-up prompts
+2. ```
+   pause
+   ```
+   → The agent made no changes and waited.
+3. ```
+   Edit flow works, commit and push it
+   ```
+   → The agent recorded the user's confirmation and what the user's testing changed in the database (above), ran the pre-commit checks below, committed and pushed.
+
+### Git
+- **Files committed:** `app/admin/opportunities/[id]/edit/page.js`, `app/admin/opportunities/[id]/edit/not-found.js`, `components/OpportunityForm.js`, `components/OpportunityCard.js`, `lib/opportunityOptions.js`, `app/page.js`, `app/globals.css` and `PROMPT_LOG.md`.
+- **Commit message (the one the agent proposed, which the user approved by saying "commit and push it"):** `Add Edit Opportunity page and Edit links using PATCH with changed fields only` (no Co-Authored-By trailer).
+- **Pre-commit checks (agent):** exactly those eight files staged; no `.env`, generated, build, package, binary or SQL files staged; a scan of the staged diff found no credential, hostname or endpoint parts; `npm run lint` passes; the last production build ran after the last code change (the move of `params` inside `<Suspense>`) and compiled successfully; the original OpenRaiz repo unchanged (0 changed files, commit `0113d35`). No database record was changed by the agent.
 - **Commit reference:** PENDING — the hash is not known until the commit exists; to be recorded in a later log update.

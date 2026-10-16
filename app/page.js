@@ -41,7 +41,9 @@ async function OpportunityList() {
       <ul className="opportunity-list">
         {opportunities.map((opportunity) => (
           <li key={opportunity.id}>
-            <OpportunityCard opportunity={opportunity} today={today} />
+            {/* showAdminActions shows the Edit link. It is on for the local development demo only: remove it, or
+                restrict it to signed-in administrators, before the directory is shown to the public. */}
+            <OpportunityCard opportunity={opportunity} today={today} showAdminActions />
           </li>
         ))}
       </ul>

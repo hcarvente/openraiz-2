@@ -470,3 +470,40 @@ body {
     flex: 1 1 100%;
   }
 }
+
+/* ---------- Edit link on cards, and edit-form notes ---------- */
+.card-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+}
+
+/* The pills' own top margin moves to .card-footer */
+.card-footer .card-pills {
+  margin: 0;
+}
+
+.button-small {
+  padding: 0.35rem 0.85rem;
+  font-size: 0.85rem;
+}
+
+/* A neutral note, such as "No changes to save." */
+.form-notice {
+  margin: 0 0 1rem;
+  padding: 0.7rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1f5a3d;
+  background: #e3f0e8;
+  border: 1px solid #b9d8c6;
+  border-radius: 8px;
+}
+
+.form-summary a {
+  color: var(--color-primary);
+  font-weight: 600;
+}

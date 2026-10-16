@@ -5,6 +5,10 @@
 // `opportunity` has the same flat shape the API returns (see lib/serializeOpportunity.js),
 // with calendar dates as "YYYY-MM-DD" strings. `today` is also "YYYY-MM-DD"; it is passed
 // in (not read from the clock here) so the card always renders the same output for the same props.
+//
+// `showAdminActions` adds an Edit link. There is no sign-in yet, so it is off by default; the homepage turns
+// it on for the local development demo. Leave it off (or guard it) wherever the cards are shown to the public.
+import Link from "next/link";
 
 const TYPE_LABELS = { job: "Job", internship: "Internship", fellowship: "Fellowship", volunteer: "Volunteer" };
 const STATUS_LABELS = { active: "Active", filled: "Filled", archived: "Archived" };
@@ -45,7 +49,7 @@ const BriefcaseShapes = (
   </>
 );
 
-export default function OpportunityCard({ opportunity, today }) {
+export default function OpportunityCard({ opportunity, today, showAdminActions = false }) {
   const typeLabel = TYPE_LABELS[opportunity.type] ?? opportunity.type;
   const statusLabel = STATUS_LABELS[opportunity.status] ?? opportunity.status;
   const relevanceLabel = RELEVANCE_LABELS[opportunity.livedExperienceRelevance] ?? opportunity.livedExperienceRelevance;
@@ -108,10 +112,21 @@ export default function OpportunityCard({ opportunity, today }) {
         ) : null}
       </ul>
 
-      <ul className="card-pills">
-        <li className={`pill pill-status-${opportunity.status}`}>{statusLabel}</li>
-        <li className="pill pill-relevance">Lived experience: {relevanceLabel}</li>
-      </ul>
+      <div className="card-footer">
+        <ul className="card-pills">
+          <li className={`pill pill-status-${opportunity.status}`}>{statusLabel}</li>
+          <li className="pill pill-relevance">Lived experience: {relevanceLabel}</li>
+        </ul>
+        {showAdminActions ? (
+          <Link
+            className="button button-secondary button-small"
+            href={`/admin/opportunities/${opportunity.id}/edit`}
+            aria-label={`Edit ${opportunity.title}`}
+          >
+            Edit
+          </Link>
+        ) : null}
+      </div>
     </article>
   );
 }
