@@ -1412,4 +1412,139 @@ No test rows inserted, no date-handling or `lastUpdated` tests, no import of the
 - **Commit message:** `Apply initial migration to Neon development database and record results` (no Co-Authored-By trailer); documentation-only.
 - **Follow-up prompt:** `Yes, commit and push the documentation update`.
 - **Pre-commit checks (agent):** only `PROMPT_LOG.md` staged; `.env` and `design-reference/` not staged; a scan of the staged diff found no credential, hostname or endpoint parts.
+- **Commit reference:** `5f0397020915e19beae9344ea6992707f5347cda` (short `5f03970`), 1 file changed (`PROMPT_LOG.md`); pushed to `origin/main`; `git ls-remote origin main` returned the same hash. Recorded here during Step 2.7.
+
+---
+
+## Milestone 2, Step 2.7 — Test Opportunity date and timestamp behavior
+
+- **Date:** 2026-10-15
+- **Objective:** Before building the API, verify with fictional rows (all rolled back) that PostgreSQL and Prisma handle opportunity calendar dates correctly across time zones, and find out whether Prisma preserves or overwrites a supplied `lastUpdated`.
+- **Previous documentation commit:** `5f03970` (`Apply initial migration to Neon development database and record results`).
+
+### Exact prompts
+1. ```
+   I approve Milestone 2, Step 2.7: Testing Opportunity database behavior.
+   Objective
+   Verify that Prisma and PostgreSQL correctly handle opportunity dates and automatic update timestamps before we begin building our API layer.
+   Step 1 — Pre-flight
+   1. Confirm both database connection strings reference our Neon development branch.
+   2. Confirm neither references production.
+   3. Verify the Opportunity table contains zero records.
+   4. Confirm the migration status is up to date.
+   5. Confirm the Git working tree contains no unexpected modifications.
+   If any check fails, stop and explain the issue.
+   Step 2 — Date handling
+   Using clearly fictional opportunity records:
+   1. Test datePosted with a value such as 2026-09-01.
+   2. Test both a populated deadline and a null deadline.
+   3. Read the stored values through Prisma and directly through PostgreSQL.
+   4. Repeat the tests under UTC, America/Los_Angeles, and Pacific/Kiritimati.
+   5. Confirm that calendar dates remain consistent across all three time zones.
+   Explain the results in plain English.
+   Step 3 — Test lastUpdated
+   Test the following behaviors:
+   1. Creating an opportunity with an explicitly supplied historical lastUpdated date.
+   2. Creating opportunities using createMany with an explicitly supplied historical date.
+   3. Updating an opportunity without supplying lastUpdated.
+   4. Updating an opportunity while explicitly supplying lastUpdated.
+   Confirm whether Prisma preserves or overwrites the supplied values.
+   If the behavior differs from our intended data model, stop and explain the issue.
+   Do not change the Prisma schema without my approval.
+   Step 4 — Transaction safety
+   All test records must be created inside transactions designed to roll back.
+   Do not use transactions that automatically commit after successful tests.
+   Run the tests sequentially.
+   If a test fails, confirm the transaction was rolled back before proceeding.
+   After all tests, verify that the Opportunity table contains zero records.
+   If any records remain, stop and report them. Do not delete them without my approval.
+   Step 5 — Final verification
+   1. Confirm the migration status remains up to date.
+   2. Confirm the database structure still matches our approved Prisma schema.
+   3. Confirm the production database was not targeted.
+   4. Confirm the original OpenRaiz repository remains unchanged.
+   5. Confirm no credentials were exposed.
+   Documentation
+   Update PROMPT_LOG.md with:
+   - The exact prompt.
+   - Commands executed.
+   - Test results.
+   - Any failures or corrections.
+   - What I learned about PostgreSQL dates and Prisma timestamps.
+   - The previous documentation commit reference 5f03970.
+   Do not fabricate test results or imply that I personally verified anything I haven't confirmed.
+   Git
+   After completing the tests:
+   1. Show me any modified files.
+   2. Propose a commit message.
+   3. Wait for my approval before committing or pushing.
+   Important constraints
+   Do not import the original ten opportunities.
+   Do not modify the Prisma schema.
+   Do not create API endpoints or frontend components.
+   Do not modify the original OpenRaiz project.
+   Stop after completing Step 2.7.
+   ```
+   (The user's message before this one was the approval of the documentation commit `5f03970`, "Yes, commit and push the documentation update"; the agent's plan for this step was given in chat.)
+
+### Pre-flight results (ran before any test; all passed)
+Both connection strings reference the development endpoint; neither references production; `Opportunity` had 0 records; `_prisma_migrations` had 1 successful record; `npx prisma migrate status` said "Database schema is up to date!"; Git had only the approved untracked `design-reference/` folder (HEAD `5f03970`).
+
+### Commands executed
+- Inline Node scripts only (no files written, nothing to commit), output filtered to hide URLs and hostnames: the pre-flight checks, one test script run three times in a row (`TZ=UTC`, `TZ=America/Los_Angeles`, `TZ=Pacific/Kiritimati`), and the final verification
+- `npx prisma migrate status` (before and after), `npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code`
+- `git status --short`, `git log --oneline -1`, `git check-ignore -v .env`; in the original repo `git status --short`, `git rev-parse --short HEAD`, and the file-timestamp fingerprint
+**How the tests worked:** the script created the Prisma client the same way `lib/prisma.js` does (the pg adapter with the pooled `DATABASE_URL`, loading the generated client directly). Each test ran inside an interactive Prisma transaction that **always throws on purpose after the checks**, so PostgreSQL rolls it back and nothing is saved. "Read directly through PostgreSQL" means a raw SQL query (`"datePosted"::text` and so on) inside the same transaction, because uncommitted rows are visible only to that transaction. A separate connection (the direct string) counted the `Opportunity` rows after every test. All test rows were clearly fictional ("ZZ FICTIONAL TEST", organization "Fictional Test Org", `example.org` link, legacy IDs starting `zz-test-`). Tests ran sequentially.
+
+### Test results (identical in all three time zones: 0 failed checks in each run)
+**Dates**
+- **D1** `datePosted` 2026-09-01 with `deadline` 2026-11-15: PostgreSQL stored exactly `2026-09-01` and `2026-11-15`; Prisma returned values that read back as the same UTC dates (as JavaScript dates they are `2026-09-01T00:00:00.000Z`). PASS.
+- **D2** `deadline` null, `datePosted` 2026-09-22: PostgreSQL stored NULL; Prisma returned null; `datePosted` exact. PASS.
+- **D3** edge dates (2026-03-08 and 2026-11-01, the US daylight-saving changes; 2026-12-31; 2027-01-01; 2028-02-29, a leap day), stored with `createMany`: all stored and returned unchanged. PASS.
+- **D4** (informational) passing a plain `"2026-09-01"` string straight to Prisma was **rejected**: "Invalid value for argument `datePosted`: premature end of input. Expected ISO-8601 DateTime." So an API must convert date strings to dates first (for example `new Date("2026-09-01")`, which JavaScript reads as UTC midnight).
+- **D5** (pitfall demonstration, informational) a date built from **local** midnight, `new Date(2026, 8, 1)`: stored as `2026-09-01` in UTC and in America/Los_Angeles, but as **`2026-08-31`** in Pacific/Kiritimati (UTC+14). This shows why dates must be built as UTC dates, not from local time.
+
+**`lastUpdated`**
+- **L0** create without a value: filled in automatically with today's **UTC** date. PASS.
+- **L1** create with explicit `2020-01-15`: **preserved**. PASS.
+- **L2** `createMany` with explicit `2019-06-30` and `2021-03-04`: both **preserved**; a third row with no value received today's UTC date. PASS.
+- **L3** update without supplying `lastUpdated` (row created with `2020-01-15`): automatically set to today's UTC date. PASS.
+- **L4** update while explicitly supplying `2022-02-02`: **preserved**. PASS.
+**Transaction safety:** after every one of the tests above, the separate connection found `Opportunity` had 0 rows, so every transaction rolled back. After all tests in each run the table contained 0 rows. No record had to be reported or deleted.
+
+### Final verification
+1. `npx prisma migrate status`: "Database schema is up to date!"
+2. Schema comparison (live database vs `prisma/schema.prisma`): exit code 0, no differences. Structure unchanged: tables `Opportunity` and `_prisma_migrations`, 21 columns, 5 enum types, indexes `Opportunity_legacyId_key` and `Opportunity_pkey`; `_prisma_migrations` has 1 finished, not-rolled-back record (`20261016011916_init`); `Opportunity` has 0 records.
+3. Production not targeted: the strings used still match the development endpoint fingerprint recorded in Step 2.6B and differ from production's. No production credentials exist on this computer.
+4. Original OpenRaiz repo: 0 changed files, commit `0113d35`, file-timestamp fingerprint matches the Step 1 baseline.
+5. No credentials exposed: all output was filtered; a scan of this log found no credential, hostname or endpoint parts. `.env` is excluded from Git (`.gitignore:34 .env*`). The Prisma schema was not modified; no schema, API or frontend files changed.
+
+### What was learned (explanations by the agent; the user has not yet confirmed these in their own words)
+- **A PostgreSQL `DATE` is a plain calendar date.** It has no time and no time zone, so by itself it cannot "shift". All the date risk is in JavaScript, which represents a day as a moment in time (midnight).
+- **Build date values as UTC dates** (for example `new Date("2026-09-01")`) and **read them back as UTC dates** (`toISOString().slice(0, 10)`). Done that way, all dates were exact in every time zone tested, including daylight-saving days and a leap day. Building from local midnight can store the wrong day, as the Kiritimati case showed.
+- **Prisma will not accept a bare `"YYYY-MM-DD"` string**; the API must convert it to a `Date` (or a full ISO string) first.
+- **`@updatedAt` does not stop you supplying a value.** In these tests, an explicitly supplied `lastUpdated` was kept on `create`, on `createMany`, and on `update`; when none is supplied, Prisma fills in today's date. So the original OpenRaiz `lastUpdated` dates can be preserved when the ten listings are imported, and ordinary edits will update the field automatically. The intended data model works as designed and **no schema change is needed**.
+- **"Today" is the UTC date.** Prisma fills `lastUpdated` with the UTC calendar date. In the America/Los_Angeles run (local date 2026-10-15, UTC date 2026-10-16) it stored `2026-10-16`, a day ahead of the local calendar date. This matches the intended model as described ("today" in UTC) but may surprise someone in a US time zone in the evening. Whether to keep it or set the date in code is a decision for later; nothing was changed.
+- **A database default is not what fills `lastUpdated`.** The column has no default in PostgreSQL; Prisma's client supplies the value, which is why raw SQL inserts must provide one.
+
+### Limits of these tests
+- All test rows were rolled back, so they did not test data that is committed and then read back later; persistence after a browser refresh is a Milestone 4 check.
+- The values were set through Prisma with the adapter and the pooled connection. They did not test the original JSON files or the real import yet.
+- The checks measured the date part of `lastUpdated`; Prisma passes a full timestamp to a date column, and only the UTC date was observed.
+
+### Failures or problems
+None. All 0 checks failed in all three runs, and no script errors occurred.
+
+### Errors or mistakes identified
+None in this step.
+
+### Corrections made
+None. (Filled in the earlier Step 2.6D commit reference `5f03970`.)
+
+### Git
+- **Files modified (uncommitted):** `PROMPT_LOG.md` only. No scripts were created in the project. `design-reference/` remains untracked.
+- **Proposed commit message:** `Verify date and lastUpdated behavior in Neon development database`
+- **Commit message:** `Verify date and lastUpdated behavior in Neon development database` (no Co-Authored-By trailer); documentation-only.
+- **Follow-up prompt:** `Yes, commit and push the documentation update`.
+- **Pre-commit checks (agent):** only `PROMPT_LOG.md` staged; `.env` and `design-reference/` not staged; a scan of the staged diff found no credential, hostname or endpoint parts.
 - **Commit reference:** PENDING — the hash is not known until the commit exists; to be recorded in a later log update.
