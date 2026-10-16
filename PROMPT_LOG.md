@@ -3080,4 +3080,67 @@ The endpoint's only database calls are a lookup by id and a delete by that same 
 - **Files committed:** `app/api/opportunities/[id]/route.js` and `PROMPT_LOG.md`.
 - **Commit message (approved):** `Add DELETE /api/opportunities/[id] endpoint` (no Co-Authored-By trailer).
 - **Pre-commit checks (agent):** exactly those two files staged; no `.env`, generated, build, package, binary or SQL files; a scan of the staged diff found no credential, hostname or endpoint parts, and the route diff contains only the new `DELETE` handler and the rewritten header comment (the `GET` and `PATCH` handlers are unchanged); `npm run lint` and `npm run build` had passed; the original OpenRaiz repo unchanged (0 changed files, commit `0113d35`).
-- **Commit reference:** PENDING — the hash is not known until the commit exists; to be recorded in a later log update (it is recorded in the Step 5.3B entry).
+- **Commit reference:** `9ab11b48dd5a7cfae2d78834e692c8a728348f42` (short `9ab11b4`), 2 files changed (`app/api/opportunities/[id]/route.js` and `PROMPT_LOG.md`; 226 insertions, 4 deletions); pushed to `origin/main`; `git ls-remote origin main` returned the same hash, the remote tree lists the route, and the working tree was clean afterwards. The staged route diff was reviewed first: it contained only the new `DELETE` handler and the rewritten header comment (3 lines removed, 31 added).
+
+---
+
+## Milestone 5, Step 5.3B — Controlled DELETE test (the user-approved creation and deletion of one fictional record)
+
+- **Date:** 2026-10-16 (UTC)
+- **Objective:** Prove that `DELETE /api/opportunities/[id]` works end to end by creating **one** clearly fictional opportunity and deleting it, with the user's explicit approval of that exact record, and prove that nothing else in the database changed. The prompt that approved it is the one quoted in full under "Follow-up prompt" in the Step 5.3A entry above (it also approved the Step 5.3A commit).
+- **Previous commit:** `9ab11b4` (`Add DELETE /api/opportunities/[id] endpoint`), made at the start of this step as Part 1 of that prompt.
+
+### What was approved, exactly
+Creating and deleting one fictional opportunity with the identity: title `DELETE Test Opportunity (Fictional - safe to delete)`, organization `Fictional DELETE Testing Org`, purpose "Testing the DELETE endpoint only"; remaining values from the plan: volunteer, relevance "relevant", status active, remote (no city, state or address), unpaid with compensation "Unpaid", date posted 2026-10-16, no deadline, application by email to `delete-test@example.org`. The safety boundaries set by the user: do not delete or modify any of the original four records; no direct SQL to create or delete the test record; no additional successful DELETE requests; no automatic retries; if the test record remained after a failure, stop and ask before any cleanup; use only the Neon development branch.
+
+### How it was run
+One script (inline Node, run against the development server and the Neon **development** branch) with these rules built in: exactly one `POST`; a read-only identity check of the new record (exactly one row with that title and organization, the id returned by the POST, the generated-id shape, not one of the original four ids, every other value matching the plan, `legacyId` empty, source "owner-added"); a **guard** that refuses to send the DELETE unless all of that holds; exactly one successful `DELETE`; then one more `DELETE` for the same id, which was expected to return 404 and delete nothing; read-only checks between steps; no retries; and, if anything unexpected happened, it would stop, report whether any test record remained, and do nothing else. Only `SELECT` queries were used on the database directly; the record was created and deleted only through the API.
+
+### Results (only what actually ran)
+**RESULT: PASSED. 23 checks, 0 failures.** Numbered as in the prompt:
+1. **Exactly four opportunities at the start:** yes, and they were the four original ids (`cmvabung80000uoitdge182wa`, `cmvadtgq70000kgitvumgz8ii`, `cmvae82zz0000pwit532gndbd`, `cmvafb1lx0000oait161gtpzf`). No record with the planned title or organization existed.
+2. **Fingerprints recorded** (id prefix : `xmin` (the last transaction that wrote the row) : `ctid` (the row's physical location) : content hash): `cmvabung:9236:(0,32):20517ebd`, `cmvadtgq:10244:(0,47):f344d4ed`, `cmvae82z:11265:(0,49):7febb76d`, `cmvafb1l:13377:(0,54):ddec841a`. PostgreSQL's write counters (insert/update/delete) were 51/25/2.
+3. **One new opportunity created with POST:** exactly one POST was sent.
+4. **POST returned HTTP 201.** The new record's id was `cmvagywjy0000tkit7f4u8cva`.
+5. **GET retrieved it:** `GET /api/opportunities/cmvagywjy0000tkit7f4u8cva` returned HTTP 200 with JSON identical to the POST response.
+6. **Five opportunities:** the table held exactly 5 rows, `GET /api/opportunities` returned 5 including the new one, and the four originals still matched their fingerprints.
+7. **Identity verified before deleting:** exactly one row had the planned title and organization; its id matched the POST response, had the generated-id shape and was not an original; its title and organization were exactly the approved ones; every other value matched the plan; `legacyId` was empty and `source` was "owner-added".
+8. **Exactly one successful DELETE** was sent, after the guard passed, aimed at that one id.
+9. **DELETE returned HTTP 200** with exactly `{"id":"cmvagywjy0000tkit7f4u8cva","deleted":true}`: the expected id and nothing else.
+10. **GET for that id returned HTTP 404** (`{"error":"Opportunity not found."}`).
+11. **A second DELETE for the same id returned HTTP 404** (`{"error":"Opportunity not found."}`); there was nothing left to delete, so it was not a second successful delete.
+12. **Exactly four opportunities afterwards:** the table held 4 rows, and no trace of the test record remained (searched by id, by title and by organization); `GET /api/opportunities` returned only the four originals.
+13. **The four existing opportunities remained unchanged:** after the test their fingerprints were identical to the baseline on all four (`xmin`, `ctid` and content hash), meaning no transaction wrote to any of them.
+14. **The homepage still displays those four opportunities:** it showed 4 cards (Youth Policy Fellow, Community Outreach Volunteer, Social Media Fellow, PATCH Test Opportunity) and no "DELETE Test" card.
+- **Request accounting:** 1 POST, 1 successful DELETE, 2 DELETE requests in total (the second returned 404). No direct SQL write was made. No request touched any of the original four records.
+- **Write counters:** 51/25/2 before, and 52/25/3 after (read after a short wait, since these statistics can lag): exactly one insert and one delete, no updates. This matches the plan's prediction.
+- **Final state of the database:** the same four rows as before, byte-identical; the test record is gone; the table is back to 4 rows.
+
+### What this test did not cover
+- The "the record disappeared between the lookup and the delete" branch (`P2025`) of the handler: it needs two requests at the same moment, and the test did not try to provoke it.
+- Deleting a record through the user interface: there is no Delete button yet (see the Step 5.4 plan below).
+- The user's own browser has not been used for anything in this step, so nothing here is user-verified.
+
+### Problems found, errors and corrections
+None in this test: every check passed on the first and only run, nothing needed a retry, and no cleanup was needed.
+
+### Lessons learned
+- A destructive test is safest when the approval names the exact record, the script verifies that identity again just before the delete, and the script refuses to proceed if anything differs.
+- `xmin`, `ctid` and a content hash show that a record was never written, which is stronger evidence than a row count.
+- Checking that a second DELETE returns 404 shows the endpoint is safe to repeat.
+
+### Proposed plan for Step 5.4 (a brief plan only; nothing implemented, awaiting the user's approval)
+- **Delete button with confirmation** on each opportunity card, next to Edit, shown only when `showAdminActions` is on (local demo only; there is no sign-in).
+- **New Client Component** `components/DeleteOpportunityButton.js`: a two-step, in-place confirmation (no pop-up library, no new dependency): first click turns the button into "Delete "<title>"? This can't be undone." with "Yes, delete" and "Cancel"; focus moves to Cancel; Escape cancels; the buttons are disabled while deleting. On HTTP 200 (or 404, meaning it is already gone) the page reloads so the list is fresh; any other result shows a plain message and keeps the record on screen.
+- **Files:** the new component, `components/OpportunityCard.js` (renders it when `showAdminActions` is on, next to Edit, with an accessible name that includes the title), `app/globals.css` (a destructive-button style), and this log. The API, validators and schema are untouched.
+- **Testing without deleting anything of the user's:** the pages and buttons are checked read-only (buttons present with the right names, hydrated page free of console errors, helper logic tested). The click-through would be done by the user in their browser on a throwaway record that the user creates with the Add form (or that the agent creates with the user's explicit approval), never on the original four.
+
+### Security notes
+`DELETE` is permanent and unauthenticated: local development only. The test used only the development branch and only requests through the API; no credentials appear anywhere in this log (scanned).
+
+### Git
+- **Files that would be committed (a documentation-only commit):** `PROMPT_LOG.md`.
+- **Proposed commit message:** `Record DELETE endpoint commit and controlled delete test results in prompt log`
+- **Commit message (approved by the user in Part 1 of their next prompt, quoted in full in the Step 5.4 entry):** `Record DELETE endpoint commit and controlled delete test results in prompt log` (no Co-Authored-By trailer). Documentation only.
+- **Pre-commit checks (agent):** only `PROMPT_LOG.md` staged; the staged changes were reviewed; no `.env`, connection string, credential or other sensitive information (scanned); the original OpenRaiz repo unchanged (0 changed files, commit `0113d35`).
+- **Commit reference:** PENDING — the hash is not known until the commit exists; it is recorded in the Step 5.4 entry.
