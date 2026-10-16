@@ -793,3 +793,204 @@ The test ran in plain Node using a small resolver, not inside Next.js. Next's bu
 - **Commit reference:** `b51b80ee2c3dbd0e9135837de9b6b046bbe8175a` (short `b51b80e`), 3 files changed; pushed to `origin/main`. `git ls-remote origin main` returned the same hash, and `git status` was clean after the push.
 - **Follow-up prompt:** `Yes, update the log and commit it`.
 - **Second commit:** `Record shared Prisma client commit in prompt log` (log-only; its hash is visible in `git log`).
+
+---
+
+## Milestone 2, Step 2.5 — Define the Opportunity model (schema only)
+
+- **Date:** 2026-10-15
+- **Objective:** Design and then implement the `Opportunity` model and its enums in `prisma/schema.prisma`, preserving the original OpenRaiz fields, and validate it. No migration, tables, import, API routes or frontend components.
+
+### Exact prompts
+1. ```
+   Yes, update the log and commit it
+   ```
+   → Log commit for Step 2.4 (`0517a3e`). The agent then asked the user for the model decisions (enums vs strings, ID strategy).
+2. ```
+   I've reviewed your proposed Opportunity model decisions and approve the following:
+   1. Use Prisma enums for:
+   - Opportunity type
+   - Opportunity status
+   - Lived-experience relevance
+   - Location type
+   - Application method type
+   Preserve the exact existing values from the original OpenRaiz data/opportunities.json unless you identify a specific compatibility issue.
+   2. Use automatically generated IDs.
+   Use a generated string ID with Prisma's cuid() default.
+   Additionally, include an optional legacyId field to preserve the readable identifiers from the original OpenRaiz listings when we eventually migrate that data.
+   The legacyId field should be unique when provided but nullable for new opportunities.
+   3. Preserve the original opportunity fields.
+   Use the original OpenRaiz JSON data structure as the reference.
+   Preserve fields including:
+   - Title
+   - Organization
+   - Description
+   - Compensation
+   - Opportunity type
+   - Lived-experience relevance
+   - Status
+   - Source
+   - Paid/unpaid indicator
+   - Date posted
+   - Last updated
+   - Deadline
+   - Location type
+   - City
+   - State
+   - Address
+   - Application method type
+   - Application method value
+   Use appropriate field types and make fields optional only when appropriate.
+   4. Keep the model simple.
+   Do not create User or Organization models yet.
+   Do not add authentication or organizational relationships.
+   Do not implement opportunity approval workflows yet.
+   Preserve the original active and filled status values.
+   5. Your task is limited to designing the database model.
+   Before modifying files, show me:
+   - The complete proposed Prisma schema.
+   - An explanation of each field in plain English.
+   - Which fields are required and optional.
+   - The enums and their allowed values.
+   - Any differences between the original JSON structure and the proposed database structure.
+   - Any potential problems with importing the existing ten opportunities later.
+   Important constraints
+   Do not modify prisma/schema.prisma yet.
+   Do not run migrations.
+   Do not create database tables.
+   Do not modify API routes or frontend components.
+   Do not commit or push anything.
+   I want to review and approve the complete schema before implementation.
+   After presenting the model, stop and wait for my approval.
+   ```
+   → The agent analyzed all ten original records plus the original `docs/ADDING-AN-OPPORTUNITY.md` and `js/archive.js` (read-only), validated a draft schema in a throwaway copy outside the project, and presented the proposal. It identified one compatibility issue: the original docs and code also recognize an `archived` status that the data does not yet use. Nothing in the project was modified.
+3. ```
+   I've reviewed your proposed Opportunity model and approve the overall structure with the following decisions.
+   Decision 1: Opportunity Status
+   Include all three statuses:
+   - active
+   - filled
+   - archived
+   Preserve these as a Prisma enum.
+   Archived opportunities should remain in the database but eventually be excluded from the public opportunities directory.
+   An expired deadline should not automatically change the stored status to archived.
+   Decision 2: Preserve Original Fields
+   Keep all the existing OpenRaiz fields you identified.
+   Preserve the original enum values, location structure, application methods, compensation information, and optional legacyId.
+   Decision 3: Add Created Timestamp
+   Add:
+   createdAt DateTime @default(now())
+   This should represent when a listing was created in the OpenRaiz 2.0 database.
+   Preserve datePosted as a separate field representing the opportunity's publication date.
+   Decision 4: Last Updated
+   Keep your proposed lastUpdated approach for now, but document the distinction between the original listing's last-updated date and future database updates.
+   Before we import any existing opportunities, verify that the original dates can be preserved correctly.
+   Your task
+   Implement the approved Opportunity model in prisma/schema.prisma.
+   Do not make any unrelated changes.
+   Verification
+   1. Run npx prisma validate.
+   2. Confirm the schema passes validation.
+   3. Explain the enums and required fields.
+   4. Confirm that all original opportunity fields remain represented.
+   5. Explain what each new field does.
+   6. Confirm no database tables were created.
+   7. Confirm no migrations were executed.
+   Documentation
+   Update PROMPT_LOG.md with the exact prompt, changes, verification results, and any errors or corrections.
+   Git
+   Show me the modified files and propose a commit message.
+   Do not commit or push without my approval.
+   Important
+   Do not run prisma migrate dev yet.
+   Do not create database tables.
+   Do not import opportunity listings.
+   Do not build API endpoints or frontend components.
+   Stop after schema validation and wait for my approval.
+   ```
+4. ```
+   I approve the Step 2.5 Opportunity model and the proposed commit.
+   Commit message:
+   Define Opportunity model and enums in Prisma schema
+   Please complete the following:
+   1. Stage only prisma/schema.prisma and PROMPT_LOG.md.
+   2. Keep design-reference/openraiz-2-mockup.png out of this commit. We will add it during our frontend development milestone.
+   3. Confirm no environment files, credentials, generated Prisma files, or unrelated changes are staged.
+   4. Review the staged diff for unintended changes.
+   5. Commit the approved files and push to origin/main.
+   6. Provide the commit hash and confirm the push succeeded.
+   Documentation
+   Confirm that PROMPT_LOG.md includes:
+   - The original Step 2.5 prompt.
+   - The schema decisions.
+   - Validation results.
+   - The date-handling tests and findings.
+   - The unrequested prisma generate command as a minor scope deviation.
+   Do not fabricate test results or corrections.
+   If recording the final commit hash requires modifying the prompt log again, propose that as a separate documentation-only commit.
+   Next step
+   After completing the commit, prepare a plan for Step 2.6: Creating the Opportunities table through our first Prisma migration.
+   The Step 2.6 plan should explain:
+   - What migration command you propose running.
+   - What tables and database objects will be created.
+   - How we'll verify that the table exists in Neon.
+   - How we'll verify that the fields and enums match our approved Prisma schema.
+   - How we'll test date handling in PostgreSQL.
+   - How we'll test whether Prisma preserves an explicitly supplied lastUpdated value during creation.
+   - How we'll verify that our original OpenRaiz project remains unchanged.
+   Do not run the migration yet.
+   Stop after presenting the Step 2.6 plan and wait for approval.
+   ```
+   → The agent checked this log against the list above, fixed two gaps (labeled the `generate` command as a scope deviation; updated the stale user-review line), staged only the two approved files, and committed. The mockup image stays untracked until the frontend milestone.
+
+### Commands executed
+- Read-only analysis of the original repo: a Python script over `data/opportunities.json` (field presence, value sets, nulls, date formats, `isPaid` vs `compensation` consistency), `grep` of `js/*.js`, reading `docs/ADDING-AN-OPPORTUNITY.md`
+- `npx prisma validate --schema <scratchpad copy>` (draft check during the proposal phase; project untouched)
+- `npx prisma validate`, `npx prisma format --check`, `npx prisma format`, `npx prisma validate` (again), `npx prisma generate` (local only, writes the git-ignored `generated/prisma/` folder)
+- Inspection of the generated `OpportunityCreateInput` type
+- A date round-trip test over all original dates under five time zones (`TZ=UTC`, `America/Los_Angeles`, `Pacific/Kiritimati`, `Pacific/Pago_Pago`, `Asia/Tokyo`)
+- A script that maps every original field to a model column
+- A read-only query of `information_schema.tables` through `lib/prisma.js` (same harness as Step 2.4)
+- `ls prisma`, credential scan, `npm run lint`, `npm run build`, `git status --short` in both repos
+
+### Files created or modified
+- **Modified:** `prisma/schema.prisma` (enums and the `Opportunity` model; comments added), `PROMPT_LOG.md` (this entry).
+- **Regenerated, git-ignored:** `generated/prisma/` (so the local client matches the new schema).
+- Not part of this step: an untracked `design-reference/openraiz-2-mockup.png` appeared in the project during this step. The agent did not create it (it appears to be a mockup the user added). It is left untouched and is not to be included in this step's commit.
+This step affects the **database design** only: no frontend, API routes or tables.
+
+### What the code does
+- **Enums** (original values unchanged, lowercase): `OpportunityType` = job, internship, fellowship, volunteer; `LivedExperienceRelevance` = required, preferred, welcomed, relevant; `OpportunityStatus` = active, filled, archived; `LocationType` = remote, hybrid, onsite; `ApplyMethodType` = url, email.
+- **Required fields:** `title`, `organization`, `description`, `type`, `livedExperienceRelevance`, `locationType`, `isPaid`, `compensation`, `datePosted`, `applyMethodType`, `applyMethodValue`.
+- **Automatic or defaulted:** `id` (generated `cuid()`), `status` (defaults to `active`), `source` (defaults to `"owner-added"`), `createdAt` (defaults to now), `lastUpdated` (set by Prisma on each change).
+- **Optional:** `legacyId` (unique when present), `city`, `state`, `address`, `deadline` (empty = rolling).
+- **Status rule:** an expired `deadline` does not change the stored status; expiry is computed when listings are displayed, and `archived` listings stay in the database but will be excluded from the public directory.
+- **`createdAt` (new):** when the row was created in the OpenRaiz 2.0 database. It is different from `datePosted`, the opportunity's publication date.
+- **`legacyId` (from the proposal):** keeps the original readable ID from the old site.
+- **`lastUpdated` vs the original:** in the original site, `lastUpdated` was a date set by hand when a listing changed. In 2.0, Prisma sets it to the current date whenever the database row changes. These are different meanings, so imported records must keep their original `lastUpdated` values rather than "today". This is documented in a comment in the schema.
+
+### Verification results
+- `npx prisma validate`: "The schema at prisma/schema.prisma is valid". It passed before and after `npx prisma format` (which only realigned columns; see Corrections).
+- **All original fields represented:** 19 of 19 flattened original fields map to a column (`id` becomes `legacyId`; `location.*` and `applyMethod.*` become flat columns). The only column not in the original is `createdAt`.
+- **No tables:** a read-only query found 0 user tables in Neon.
+- **No migrations:** `prisma/migrations/` does not exist, and `prisma/` contains only `schema.prisma`.
+- **Dates (pre-import verification, partial):**
+  - Treating the original `YYYY-MM-DD` strings as UTC dates and formatting them back with `toISOString().slice(0, 10)` reproduced all 28 original dates exactly (10 `datePosted`, 10 `lastUpdated`, 8 non-null `deadline`) under all five time zones tested.
+  - Formatting those same dates in local time was wrong for all 28 in the two Pacific time zones tested (`America/Los_Angeles`, `Pacific/Pago_Pago`), so any API or display code must use UTC date handling.
+  - The generated create type accepts an explicit `lastUpdated` (`lastUpdated?: Date | string`), so an import should be able to supply the original value.
+- **NOT yet verified:** this date testing exercised JavaScript only. Two things can only be proven against a real table and remain open for the migration/seed steps: (1) that Postgres and the pg adapter store and return `@db.Date` values without shifting a day, and (2) that Prisma keeps an explicitly supplied `lastUpdated` on create instead of overwriting it with today's date. These will be tested before any import (for example inside a rolled-back transaction). If (2) fails, the fallback is to manage `lastUpdated` in the API code.
+- Credential scan: no part of the real credentials appears in the schema or the log. `npm run lint` passes and `npm run build` compiles. The original `openraiz` repo has 0 changed files.
+- **User review:** the user reviewed the implemented model and approved it and the commit (prompt 4 below). The user did not report running any tests of their own in this step.
+
+### Errors or mistakes identified
+- **Minor scope deviation:** the agent ran `npx prisma generate` (regenerating the git-ignored client in `generated/prisma/`) although the prompt asked only for `npx prisma validate`. It changed no tracked files and touched no database; it was done to inspect the generated create type. The user identified it as a deviation in prompt 4.
+- `npx prisma format --check` reported the first version of the schema as not formatted to Prisma's standard column alignment (cosmetic; validation still passed).
+- While testing, the agent copied the schema to `/tmp` instead of the session scratchpad folder, against its instructions; the temporary copy was deleted immediately.
+
+### Corrections made
+- Ran `npx prisma format` (alignment of columns only, no content changes; validated again afterwards).
+- Removed the stray `/tmp` copy.
+
+### Git
+- **Commit message:** PENDING — nothing committed; awaiting the user's approval.
+- **Commit reference:** PENDING.

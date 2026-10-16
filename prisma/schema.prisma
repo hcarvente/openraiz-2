@@ -1,5 +1,5 @@
 // Prisma schema for OpenRaiz 2.0.
-// No models yet: the Opportunity model is added in a later step.
+// Enum values are the original OpenRaiz values (data/opportunities.json), unchanged.
 
 generator client {
   provider = "prisma-client"
@@ -10,4 +10,77 @@ datasource db {
   provider = "postgresql"
   // The connection URL is NOT set here. In Prisma 7 it lives in prisma.config.ts
   // (and the app passes its own URL to the client through the pg adapter).
+}
+
+enum OpportunityType {
+  job
+  internship
+  fellowship
+  volunteer
+}
+
+enum LivedExperienceRelevance {
+  required
+  preferred
+  welcomed
+  relevant
+}
+
+// An expired deadline does NOT change the stored status. Expiry is computed from
+// `deadline` when listings are displayed. `archived` listings stay in the database
+// but will be excluded from the public directory.
+enum OpportunityStatus {
+  active
+  filled
+  archived
+}
+
+enum LocationType {
+  remote
+  hybrid
+  onsite
+}
+
+enum ApplyMethodType {
+  url
+  email
+}
+
+model Opportunity {
+  id                       String                   @id @default(cuid())
+  // Readable ID from the original OpenRaiz site (e.g. "2026-community-health-fellow-001").
+  // Unique when present; empty for opportunities created in OpenRaiz 2.0.
+  legacyId                 String?                  @unique
+  title                    String
+  organization             String
+  description              String
+  type                     OpportunityType
+  livedExperienceRelevance LivedExperienceRelevance
+  status                   OpportunityStatus        @default(active)
+  source                   String                   @default("owner-added")
+
+  // Original `location` object, flattened. city/state/address are empty for remote.
+  locationType LocationType
+  city         String?
+  state        String?
+  address      String?
+
+  isPaid       Boolean
+  compensation String
+
+  // Calendar dates (no time of day). datePosted is the opportunity's publication date.
+  datePosted DateTime  @db.Date
+  deadline   DateTime? @db.Date // empty = rolling, no cutoff
+
+  // When this row was created in the OpenRaiz 2.0 database. Not the same as datePosted.
+  createdAt DateTime @default(now())
+
+  // Set by Prisma to today whenever this row changes in OpenRaiz 2.0. The original
+  // site's own lastUpdated dates (set by hand) must be preserved when importing;
+  // see PROMPT_LOG.md (Step 2.5) for how that will be verified before any import.
+  lastUpdated DateTime @updatedAt @db.Date
+
+  // Original `applyMethod` object, flattened.
+  applyMethodType  ApplyMethodType
+  applyMethodValue String
 }
