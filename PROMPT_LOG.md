@@ -1889,4 +1889,196 @@ Nothing was changed in production.
 - **Files committed:** `lib/validateOpportunity.js`, `app/api/opportunities/route.js` and `PROMPT_LOG.md`. `design-reference/` stays out (and the deleted database row is not part of any commit).
 - **Commit message:** `Add POST /api/opportunities endpoint with server-side validation` (no Co-Authored-By trailer)
 - **Pre-commit checks (agent):** only those three files staged; `.env`, `design-reference/`, `generated/` and `.next/` not staged; a scan of the staged diff found no credential, hostname or endpoint parts.
+- **Commit reference:** `695d49e36259a4660b6e92dab978e58eb65a4dc0` (short `695d49e`), 3 files changed (`lib/validateOpportunity.js`, `app/api/opportunities/route.js`, `PROMPT_LOG.md`; 477 insertions, 2 deletions); pushed to `origin/main`; `git ls-remote origin main` returned the same hash. Recorded here during Step 4.1.
+
+---
+
+## Milestone 4, Step 4.1 — Display saved opportunities on the homepage
+
+- **Date:** 2026-10-16 (UTC; the work started on the evening of 2026-10-15 US Pacific time)
+- **Objective:** Show the fictional opportunity stored in the Neon development database on the homepage, as a reusable React component, using the approved mockup as the visual reference. No form, PATCH, DELETE, search, filters, import or schema changes.
+- **Previous commit:** `695d49e` (`Add POST /api/opportunities endpoint with server-side validation`).
+
+### Exact prompts
+1. ```
+   I approve Milestone 4, Step 4.1: Displaying saved opportunities on the OpenRaiz 2.0 homepage.
+   Architectural decisions
+   1. Use a Next.js Server Component for the initial opportunity list.
+   2. Retrieve the opportunities directly through our existing Prisma Client rather than making an HTTP request to our own API from the server.
+   3. Keep the existing GET /api/opportunities endpoint unchanged and independently testable.
+   4. Use our approved OpenRaiz 2.0 mockup as the visual reference.
+   5. Preserve the original OpenRaiz colors, typography, and general branding.
+   Important
+   Our approved mockup is located at:
+   design-reference/openraiz-2-mockup.png
+   Before writing code, inspect the mockup and briefly describe how you intend to translate the opportunity card design into React.
+   Do not attempt to recreate the entire mockup yet.
+   Objective
+   Display the fictional opportunity currently stored in our Neon development database as a reusable React component.
+   Step 1 — Build OpportunityCard
+   Create:
+   components/OpportunityCard.js
+   The component should receive opportunity information through React props.
+   Display:
+   - Opportunity title
+   - Organization
+   - Opportunity type
+   - Location and work arrangement
+   - Compensation
+   - Application deadline
+   - Opportunity status
+   - Lived-experience relevance
+   Handle optional information gracefully.
+   Format dates using UTC to avoid shifting calendar dates across time zones.
+   Step 2 — Update Homepage
+   Modify:
+   app/page.js
+   Retrieve opportunities through Prisma on the server.
+   Display each opportunity using the reusable OpportunityCard component.
+   Include:
+   - A simple branded OpenRaiz header.
+   - An opportunities section.
+   - The existing fictional opportunity.
+   - A friendly empty state if there are no opportunities.
+   - A simple error state if the database query fails.
+   Step 3 — Styling
+   Use the existing OpenRaiz color palette:
+   - Background: #FAF7F2
+   - Primary green: #2E6F4E
+   - Accent orange: #E4622B
+   - Main text: #2B2B2B
+   Use the existing OpenRaiz typography.
+   Keep the design clean and responsive.
+   Do not introduce additional styling libraries.
+   Step 4 — Verification
+   1. Run the Next.js application locally.
+   2. Confirm the homepage displays the saved fictional opportunity.
+   3. Confirm the opportunity information matches the database.
+   4. Refresh the page and confirm the opportunity remains visible.
+   5. Verify that the GET API endpoint continues to work.
+   6. Test the empty state without permanently deleting the existing test opportunity.
+   7. Run lint and build checks.
+   8. Confirm no database schema changes or migrations occurred.
+   9. Confirm the original OpenRaiz repository remains unchanged.
+   Do not claim I personally verified the browser until I confirm it.
+   Step 5 — Documentation
+   Update PROMPT_LOG.md with:
+   - Milestone 4, Step 4.1.
+   - This exact prompt.
+   - Files created or modified.
+   - Testing results.
+   - Any errors or corrections.
+   - The previous commit reference 695d49e.
+   Explain which code runs on the server and which code produces the interface displayed in the browser.
+   Step 6 — Git
+   After verification:
+   1. Show me the modified files.
+   2. Propose a descriptive commit message.
+   3. Wait for my approval before committing or pushing.
+   Important constraints
+   Do not build the opportunity submission form yet.
+   Do not implement PATCH or DELETE.
+   Do not add search or category filtering.
+   Do not import the original ten opportunities.
+   Do not modify the Prisma schema.
+   Do not modify the existing OpenRaiz repository.
+   Stop after completing Step 4.1.
+   ```
+   (The user's message before this one was the approval of the Step 3.2 commit and the deletion of the extra test record, "Yes, delete the extra record and commit and push"; the agent's plan and two questions for this step were given in chat, and this prompt contains the user's answers.)
+
+### Reading the mockup, and the plan described before coding
+The mockup (`design-reference/openraiz-2-mockup.png`) shows a homepage, an opportunities directory, a detail page, an admin dashboard and a form. The agent used panel 2 (the directory) as the reference for the card: a white rounded card with a soft border and shadow; a circular icon badge on the left; a bold title with the organization beneath; the deadline in the accent color at the top right ("Apply by Nov 30, 2026"); a row of small icon-plus-text items for type, location and pay; and pills for status and lived experience. Deliberately **not** copied: tags (the data model has none), the description snippet, the "Apply" arrow, the navigation bar and "Submit an Opportunity" button (no other pages exist yet), and the mockup's purple and other type colors (not in the original palette; the type is shown by its label instead).
+
+### Reading the bundled Next.js docs first
+`AGENTS.md` says to read `node_modules/next/dist/docs/` first. With **Cache Components** enabled (set in `next.config.mjs` by `create-next-app`), the "Streaming uncached data" docs say a database read in a page must be wrapped in `<Suspense>` with a fallback: the fallback ships in the static shell and the data streams in at request time. The page follows that pattern. The production build confirms it: the homepage is `◐ Partial Prerender` (static shell with dynamic, server-streamed content).
+
+### Files created or modified
+- **Created:** `components/OpportunityCard.js`.
+- **Modified:** `app/page.js` (replaced the placeholder), `app/globals.css` (added the card, list and state styles; added the `--color-accent-text` variable; the old placeholder `.page-main p` rule was replaced by scoped classes so it no longer affects card text), `PROMPT_LOG.md` (this entry).
+- **Unchanged:** `app/api/` (the GET endpoint), `lib/`, `prisma/` (schema and migration), `package.json`, `package-lock.json`. No new dependencies or libraries (icons are small inline SVGs).
+- Screenshots used for visual checks were saved only in `.next/preview/` (a git-ignored build folder) and are not part of any commit. The untracked `design-reference/openraiz-2-mockup.png` was not changed during this step; the user has since approved committing it as a design reference (see Git).
+
+### What the code does
+- **`components/OpportunityCard.js`:** shows one opportunity from props (the same flat shape as the API, with dates as `YYYY-MM-DD` strings, plus a `today` string). It shows the title, organization, a circular badge, the deadline, three icon-plus-text items (type, location and arrangement, compensation) and two pills (status, "Lived experience: …"). Optional data is handled: remote shows just "Remote", hybrid or on-site adds "· Oakland, CA", a missing deadline shows "Rolling deadline", a missing compensation hides that item, and an unknown enum value is shown as stored. Dates are formatted in UTC (`2026-12-15` becomes "Dec 15, 2026") and wrapped in a `<time>` element. A deadline earlier than `today` shows "Deadline passed …" in muted grey (a deadline equal to today is still open, as in the original site). It uses no state or effects.
+- **`app/page.js`:** the `Home` component renders the branded header (the existing `SiteHeader`), the heading "Opportunities", a one-line intro and a `<Suspense>` boundary around `OpportunityList`. `OpportunityList` asks Prisma for all opportunities (same order as the API), converts them with the existing `serializeOpportunity` helper, and renders: an error message if the query fails (logging only the error's name and code), a friendly empty-state message if there are none, or "N opportunity/opportunities found" and one `OpportunityCard` per row. It queries Prisma directly and does not call the API.
+- **`app/globals.css`:** plain CSS using the original palette (background `#FAF7F2`, primary green `#2E6F4E`, accent orange `#E4622B`, text `#2B2B2B`, muted `#6B6459`) and the original `system-ui` fonts. **Deliberate adjustment:** the accent `#E4622B` is only about 3.7:1 contrast on white, too light for small text, so the deadline text uses a darker shade of the same orange, `#B5470F` (about 5.4:1), while the calendar icon keeps the exact `#E4622B`. On screens under 560 px the deadline drops under the title.
+
+### Commands executed
+- Reading docs: `sed`, `grep` over `node_modules/next/dist/docs/`; reading the mockup image
+- `npm run lint`; `npm run build` (twice)
+- `npm --prefix <project folder> run dev` (background dev server), `curl` and Node `fetch` requests to `/` and `/api/opportunities`
+- A read-only Node script using `pg` that read the row from PostgreSQL and compared each field with the HTML the server sent
+- **Empty-state test:** one Node script (see below) that deleted the one row from the **development** database temporarily and restored it
+- Headless Chrome (`Google Chrome --headless=new --screenshot`, with throwaway profiles in `.next/preview/`, not the user's profile) for desktop and mobile screenshots, which the agent looked at
+- `DATABASE_URL="postgresql://nobody:notarealpassword@127.0.0.1:1/nodb" npx next start -p 3001` (production build with a **fake, unreachable** address, to test the error state; no real database or credential involved); `pkill` of the servers I started
+- `npx prisma migrate status`, `npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code`; `git status --short`, `git diff --quiet`; in the original repo `git status --short`, `git rev-parse --short HEAD` and the file-timestamp fingerprint
+
+### Test results (only what actually ran)
+- **Saved opportunity displayed, matching the database:** the homepage returned HTTP 200 and showed exactly one card. Reading the row straight from PostgreSQL and comparing with the page: title "Youth Policy Fellow (Fictional Test Listing)", organization "Fictional Policy Collective", type "Fellowship", location "Hybrid · Oakland, CA", compensation "Paid, $25/hr", deadline "Apply by Dec 15, 2026" (stored `2026-12-15`), status "Active", "Lived experience: Preferred". All 8 fields matched; "1 opportunity found" was shown; the number of cards equaled the number of rows; the header and heading were present; and no database or credential strings were in the HTML sent to the browser. The `<time>` element carries the stored date `2026-12-15`.
+- **Refresh:** 5 separate requests all returned the card. Three were displayed (their first 70 characters were identical) and two further requests were compared in full and were identical. The content comes from the database, not from the browser.
+- **GET API still works:** `GET /api/opportunities` returned HTTP 200 with the 1 row (`datePosted` `2026-10-16`, `deadline` `2026-12-15`); `app/api/` has no changes in this step.
+- **Empty state, without permanent deletion:** one script took an exact snapshot of the row (`to_jsonb`), deleted it from the development database (committed, so the page could see it), then confirmed: the homepage still returned HTTP 200, showed the friendly message "No opportunities have been added yet. Please check back soon.", showed no card and no "found" line, still rendered the header and heading, did not show the error message, and `GET /api/opportunities` returned `[]` at the same time. A `finally` block then restored the row from the snapshot, and the script verified that the restored row is identical to the original on all 21 columns, including `id`, `createdAt` and `lastUpdated`, and that the homepage and API show the card again. The row was out of the table only for those few seconds. (PostgreSQL's insert and delete counters for the table each went up by one because of this.) This was a deliberate, temporary deletion on the development branch only, which the user's prompt asked for.
+- **Error state:** a production build pointed at a fake unreachable address returned the page with the simple message "We couldn't load opportunities right now. Please try again in a moment." (announced with `role="alert"`), no card, and the header and heading still rendered. None of nine sensitive strings (the fake password, the fake user, `127.0.0.1`, `postgresql`, the fake database name, `ECONNREFUSED`, `P1001`, `prisma`, `SELECT`) appeared in the page; the server console logged only `Homepage could not load opportunities: PrismaClientKnownRequestError P1001`. The HTTP status of that response was 200, because the page streams (headers are sent before the database answers); this is a known trade-off of streaming, noted here, not changed.
+- **Lint and build:** `npm run lint` passes with no warnings; `npm run build` compiles successfully and lists `◐ /` (Partial Prerender), `○ /_not-found` and `ƒ /api/opportunities`.
+- **Schema and migrations:** `npx prisma migrate status` says "Database schema is up to date!"; the live-database-vs-schema comparison returned exit code 0 (no differences); `prisma/migrations/` still has only the original migration; `Opportunity` has 1 row and `_prisma_migrations` 1 record. `prisma/`, `app/api/`, `lib/` and the package files are unchanged.
+- **Original OpenRaiz repo:** 0 changed files, commit `0113d35`, file-timestamp fingerprint matches the Step 1 baseline. Production was not touched, and no credentials were printed or are in this log.
+- **Visual review by the agent (not by the user):** screenshots from headless Chrome. At 1100 px wide the card looks like the mockup's directory card in the original colors: sprout header, green heading, card with a green badge, title and organization, the orange deadline at the top right, the type, location and pay items, an "Active" pill and a "Lived experience: Preferred" pill. In a true 390 px frame the card wraps cleanly: the deadline sits under the title and the meta items wrap, with no horizontal overflow. **Not visually confirmed:** a 320 px frame (every attempt captured only the loading shell because of my screenshot timing, though the header and intro fit that width).
+- **Browser check confirmed by the user:** after the agent asked them to wait, the user replied `Browser check confirmed, commit and push`. This refers to the check they described in their previous prompt: opening http://localhost:3000, seeing the fictional opportunity displayed correctly, and seeing it still visible after a refresh. The user did not describe what they saw in more detail, and the agent did not run or witness this check. Their earlier confirmation covers only that homepage check, not the headless-Chrome mobile screenshots (which were the agent's own review).
+
+### Which code runs on the server, and what produces the interface in the browser
+- **On the server only:** `app/page.js` (both `Home` and `OpportunityList`), `components/OpportunityCard.js`, `components/SiteHeader.js`, `lib/prisma.js` and `lib/serializeOpportunity.js`. These are all **Server Components** (the default in the Next.js App Router, with no `"use client"`). They run on your computer's Next.js server, which is where the database password lives. `OpportunityList` runs the Prisma query, reads today's date, formats the dates and builds the cards. The database connection string never leaves the server.
+- **What the browser receives:** finished HTML (the header, the heading, the card's elements and text) and the CSS from `app/globals.css`. First the static shell arrives with "Loading opportunities…", then the server streams in the cards, and a small script swaps them in. The browser shows this HTML styled by the CSS; it never sees Prisma, SQL or the connection string. The only JavaScript the browser runs here is Next.js's own small client runtime (for example for the logo link and for swapping in the streamed content); none of our card or list code is sent as JavaScript, because it is not needed in the browser.
+- **Later:** pieces that need interactivity, such as the submission form and the edit and delete buttons, will be **Client Components** (`"use client"`), and they will talk to the server through the API endpoints.
+
+### Errors or mistakes identified
+- My first check that the `<time>` element carries the stored date reported FAIL. The component was fine: React writes the attribute as `dateTime` and HTML attribute names are case-insensitive. My check had been case-sensitive. I re-ran it case-insensitively and it passed.
+- My first headless-Chrome screenshot attempt used a shell loop that did not split its arguments, so Chrome ignored the requested window sizes and produced two identical default-size images. I redid them with explicit sizes.
+- The first 390 px screenshot looked clipped. I suspected a layout bug, but it was a headless-Chrome minimum-window-width artifact. Rendering the page inside a true 390 px frame showed the layout wraps correctly. Screenshots of the 320 px frame kept catching the loading shell before the cards streamed in (timing), so that width is unconfirmed.
+- (Several automated notifications about servers I stopped on purpose were not from the user and required no action.)
+- **Testing approach to avoid without specific approval (recorded at the user's request):** for the empty-state test the agent temporarily deleted the one stored test opportunity from the development database and then restored it. It worked (the restore was verified identical on all 21 columns), but it briefly removed real stored data, and a failure between the delete and the restore would have lost the row (the snapshot was printed for recovery). The user's prompt said to test the empty state "without permanently deleting" the opportunity, and the agent took that as permission for a temporary deletion instead of asking first. **In future steps, do not delete or modify stored rows, even temporarily, as a way of testing without the user's specific approval.** Safer options to propose instead: test the empty state against an empty database branch or with an empty list supplied to the component, or ask first and say exactly what would be removed and how it would be restored.
+- No code mistakes were found by lint, build or tests.
+
+### Corrections made
+- Replaced the case-sensitive check, redid the screenshots at explicit sizes, and used true-width frames for mobile. Recorded the earlier commit reference `695d49e` in the Step 3.2 entry.
+
+### Follow-up prompt
+2. ```
+   I've reviewed your Step 4.1 results and approve committing the frontend changes.
+   Before committing, I will personally open http://localhost:3000 and verify that the fictional opportunity displays correctly and remains visible after refreshing.
+   Please wait for my confirmation of that browser check before recording it as verified by me.
+   Approved files:
+   - components/OpportunityCard.js
+   - app/page.js
+   - app/globals.css
+   - PROMPT_LOG.md
+   - design-reference/openraiz-2-mockup.png
+   Commit message:
+   Display saved opportunities on the homepage with OpportunityCard
+   Before committing:
+   1. Verify that only the approved files are staged.
+   2. Confirm no environment variables, database credentials, or generated files are included.
+   3. Confirm that the original OpenRaiz repository remains unchanged.
+   4. Verify that the mockup image is included as a design reference.
+   5. Confirm the prompt log accurately documents the tests and results.
+   6. Record the temporary deletion and restoration of the test opportunity as a testing approach we should avoid without specific approval in future steps.
+   After I confirm the browser test, commit the changes and push to origin/main.
+   Provide the commit hash and confirm the push succeeded.
+   Next step
+   After committing, prepare a plan for Step 4.2: Building the Add Opportunity form.
+   Do not implement the form yet.
+   Do not modify the database schema or API endpoints.
+   Stop after presenting the Step 4.2 plan.
+   ```
+   → The agent ran the pre-commit checks below, corrected one overstatement in this log (the refresh test), recorded the temporary-deletion lesson (see "Errors or mistakes identified"), and held the commit until the user confirmed their browser check.
+3. ```
+   Browser check confirmed, commit and push
+   ```
+   → The agent recorded the confirmation above, staged the five approved files, re-ran the staged-file and credential checks, committed and pushed.
+
+**Pre-commit checks run before staging (agent; nothing was staged or committed yet):** a `git add --dry-run` of the approved files lists exactly the five approved files (`components/OpportunityCard.js`, `app/page.js`, `app/globals.css`, `PROMPT_LOG.md`, `design-reference/openraiz-2-mockup.png`); nothing else is modified or untracked; nothing is staged; none of the files is an environment, generated, build or package file; a credential scan of the four text files and the bytes of the PNG found no credential, hostname or endpoint parts; the mockup is a valid 1312 x 1199 PNG (1,661,529 bytes), included as a design reference; the original OpenRaiz repo has 0 changed files at commit `0113d35` with the same file-timestamp fingerprint as the Step 1 baseline.
+
+### Git
+- **Files committed (approved by the user):** `components/OpportunityCard.js`, `app/page.js`, `app/globals.css`, `PROMPT_LOG.md` and `design-reference/openraiz-2-mockup.png`.
+- **Commit message:** `Display saved opportunities on the homepage with OpportunityCard` (no Co-Authored-By trailer).
+- **Pre-commit checks (agent, on the staged files):** exactly the five approved files staged; `.env`, generated, build and package files not staged; a scan of the staged text diff and the PNG's bytes found no credential, hostname or endpoint parts; the original OpenRaiz repo unchanged (0 changed files, commit `0113d35`).
 - **Commit reference:** PENDING — the hash is not known until the commit exists; to be recorded in a later log update.
