@@ -1284,4 +1284,132 @@ No existing file was modified by the command. (This log entry modifies `PROMPT_L
 - **Commit message:** `Add initial Prisma migration for Opportunity table` (no Co-Authored-By trailer)
 - **Follow-up prompt:** `Yes, commit and push the migration files`.
 - **Pre-commit checks (agent):** only `prisma/migrations/20261016011916_init/migration.sql`, `prisma/migrations/migration_lock.toml` and `PROMPT_LOG.md` staged; `.env`, `design-reference/` and generated files not staged; a scan of the staged diff found no credential, hostname or endpoint parts.
-- **Commit reference:** PENDING — the hash is not known until the commit exists; to be recorded in a later log update. The migration has **not** been applied; applying it is a separate step that awaits approval.
+- **Commit reference:** `4059b63c5f6d2102075f2dfb48ed43091c6db8cd` (short `4059b63`), 3 files changed (`migration.sql`, `migration_lock.toml`, `PROMPT_LOG.md`); pushed to `origin/main`; `git ls-remote origin main` returned the same hash. Recorded here during Step 2.6D. At the time of this commit the migration had **not** been applied.
+
+---
+
+## Milestone 2, Step 2.6D — Apply the initial migration to the Neon development database
+
+- **Date:** 2026-10-15
+- **Objective:** Apply the previously reviewed and committed migration `20261016011916_init` (commit `4059b63`) to the Neon **development** branch, and verify that PostgreSQL created exactly the approved `Opportunity` table and enum types. No test rows, date tests, import, API or frontend work, and no change to the schema.
+
+### Exact prompts
+1. ```
+   I approve Milestone 2, Step 2.6D: Applying our initial Prisma migration to the Neon development database.
+   Objective
+   Apply our previously reviewed migration and verify that PostgreSQL creates the approved Opportunity table and enum types.
+   Approved migration
+   20261016011916_init
+   This migration was committed to GitHub in commit 4059b63.
+   Step 1 — Pre-flight verification
+   Before making any database changes:
+   1. Confirm DATABASE_URL and DIRECT_URL reference the Neon development branch.
+   2. Confirm neither points to the production endpoint.
+   3. Confirm the development database contains only the empty _prisma_migrations table.
+   4. Confirm no Opportunity table or custom enum types exist.
+   5. Run npx prisma validate.
+   6. Run npx prisma migrate status and confirm exactly one pending migration.
+   7. Confirm the Git working tree contains no unexpected changes.
+   If any check fails, stop and explain the issue before proceeding.
+   Step 2 — Apply migration
+   Run:
+   npx prisma migrate deploy
+   Apply only the previously reviewed migration.
+   Do not generate additional migrations or modify the schema.
+   Do not run prisma migrate reset.
+   Step 3 — Verify database structure
+   After the migration:
+   1. Confirm the Opportunity table exists in Neon development.
+   2. Confirm all five approved enum types exist.
+   3. Verify all 21 columns match our approved schema.
+   4. Confirm the primary key and unique legacyId constraint exist.
+   5. Confirm createdAt and lastUpdated have the expected definitions.
+   6. Run npx prisma migrate status and confirm the database is up to date.
+   7. Run the Prisma schema comparison and confirm there are no differences.
+   8. Confirm _prisma_migrations contains one successful migration record.
+   9. Confirm the Opportunity table contains zero records.
+   Step 4 — Security
+   Confirm:
+   - The production database was not targeted.
+   - No credentials were printed or committed.
+   - .env remains excluded from Git.
+   - The original OpenRaiz repository remains unchanged.
+   Step 5 — Documentation
+   Update PROMPT_LOG.md with:
+   - The exact prompt.
+   - Commands executed.
+   - Migration results.
+   - Database verification results.
+   - Any errors or corrections.
+   - The previous migration commit reference 4059b63.
+   Important boundaries
+   Do not insert test opportunities yet.
+   Do not perform the date-handling tests yet.
+   Do not import the ten original OpenRaiz listings.
+   Do not create API endpoints or frontend components.
+   Do not modify the approved Prisma schema.
+   Git
+   After verification, show me any modified files and propose a commit message.
+   Do not commit or push without my approval.
+   Stop after verifying the migration
+   ```
+   (The user's message before this one was the approval of the migration commit, "Yes, commit and push the migration files"; the agent's plan for this step was given in chat.)
+
+### Pre-flight results (all ran before the migration; all passed)
+1. `DATABASE_URL` and `DIRECT_URL` reference the development endpoint (the short non-reversible fingerprint matches the one recorded in Step 2.6B).
+2. Neither points to the production endpoint.
+3. The development database contained only `public._prisma_migrations`, with 0 rows.
+4. No `Opportunity` table and 0 custom enum types.
+5. `npx prisma validate`: valid.
+6. `npx prisma migrate status`: "1 migration found in prisma/migrations. Following migration have not yet been applied: 20261016011916_init" (exactly one pending).
+7. Git: only the approved untracked `design-reference/`; HEAD `4059b63`; `.env` excluded.
+
+### Commands executed
+- Inline Node scripts (no files written) using `pg`, output filtered to hide URLs and hostnames: the pre-flight checks, and the post-migration structure checks below
+- `npx prisma validate`
+- `npx prisma migrate status` (before and after)
+- **`npx prisma migrate deploy`** (run with no input available; the only command that changed the database)
+- `npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code`
+- `git status --short`, `git check-ignore -v .env`, `git ls-files`; in the original repo `git status --short`, `git rev-parse --short HEAD` and the file-timestamp fingerprint
+Not run: `prisma migrate dev`, `prisma migrate reset`, any new migration generation, any insert.
+
+### Migration result
+`prisma migrate deploy` output: "1 migration found in prisma/migrations", "Applying migration `20261016011916_init`", "All migrations have been successfully applied." Only the reviewed migration was applied. The schema file was not modified.
+
+### Database verification results (Neon development branch)
+1. **`Opportunity` table exists:** the `public` schema contains exactly two tables: `Opportunity` and Prisma's `_prisma_migrations`.
+2. **Five enum types exist** with exactly the approved values: `OpportunityType` (job, internship, fellowship, volunteer), `LivedExperienceRelevance` (required, preferred, welcomed, relevant), `OpportunityStatus` (active, filled, archived), `LocationType` (remote, hybrid, onsite), `ApplyMethodType` (url, email).
+3. **21 columns** (schema: 21); every column's type and nullability matches the approved schema (checked column by column from the live database against `schema.prisma`).
+4. **Keys:** the primary key is exactly `id`; a unique index `Opportunity_legacyId_key` exists on `legacyId`. The table's indexes are only that unique index and the primary key.
+5. **Definitions:** `createdAt` is `timestamp(3)`, NOT NULL, default `CURRENT_TIMESTAMP`. `lastUpdated` is `date`, NOT NULL, with no database default (Prisma sets it). `status` defaults to `active` and `source` to `owner-added`.
+6. **`npx prisma migrate status`:** "1 migration found in prisma/migrations. Database schema is up to date!"
+7. **Schema comparison** (live database vs `prisma/schema.prisma`, `migrate diff --from-config-datasource --to-schema ... --exit-code`): "No difference detected", exit code 0.
+8. **`_prisma_migrations`:** exactly 1 record, `20261016011916_init`, finished, not rolled back, 1 applied step, no error log; its recorded checksum equals the SHA-256 of the committed `migration.sql`.
+9. **`Opportunity` contains 0 records.**
+
+### Security checks
+- **Production not targeted:** `migrate deploy` ran with the strings in `.env`, which still reference the development endpoint and not production (fingerprint check run after the migration). No production credentials exist locally.
+- **No credentials printed or committed:** all output was filtered, and a scan found no credential, hostname or endpoint parts in this log entry. No file was staged or committed in this step.
+- **`.env`** is excluded from Git (`.gitignore:34 .env*`) and untracked.
+- **Original OpenRaiz repo:** 0 changed files, still at commit `0113d35`, file-timestamp fingerprint matches the Step 1 baseline.
+
+### Not done (as required)
+No test rows inserted, no date-handling or `lastUpdated` tests, no import of the ten original listings, no API or frontend changes. These remain for later steps.
+
+### Problems encountered
+- My first run of the structure-verification script crashed with "(intermediate value)... .join is not a function". The `pg` driver returned an array of enum labels as a text string, so the script's comparison code failed. This was a bug in the agent's check, not in the database. The migration-status and schema-comparison results from that same run were valid. After casting the labels to text in the query, the full structure check was re-run and passed. The reported results above come from the re-run.
+
+### Errors or mistakes identified
+- The verification-script bug above (agent's script, not the migration).
+
+### Corrections made
+- Fixed the script (cast enum labels to text) and re-ran the complete structure verification.
+- Recorded the earlier migration commit reference `4059b63` in the Step 2.6C entry.
+
+### Git
+- **Files modified (uncommitted):** `PROMPT_LOG.md` only. The migration application changed the Neon development database, not any project file. `design-reference/` remains untracked.
+- **Proposed commit message:** `Apply initial migration to Neon development database and record results`
+- **Commit message:** `Apply initial migration to Neon development database and record results` (no Co-Authored-By trailer); documentation-only.
+- **Follow-up prompt:** `Yes, commit and push the documentation update`.
+- **Pre-commit checks (agent):** only `PROMPT_LOG.md` staged; `.env` and `design-reference/` not staged; a scan of the staged diff found no credential, hostname or endpoint parts.
+- **Commit reference:** PENDING — the hash is not known until the commit exists; to be recorded in a later log update.
