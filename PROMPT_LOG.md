@@ -686,3 +686,107 @@ None.
 - **Commit reference:** `c198f8e2ed18ba8841a7f3cb896aa4ed7290aa7e` (short `c198f8e`), 4 files changed; pushed to `origin/main`. `git ls-remote origin main` returned the same hash, and `git status` was clean after the push.
 - **Follow-up prompt:** `Yes, update the log and commit it`.
 - **Second commit:** `Record Prisma configuration commit in prompt log` (log-only; its hash is visible in `git log`).
+
+---
+
+## Milestone 2, Step 2.4 — Verify the Prisma ↔ Neon connection
+
+- **Date:** 2026-10-15
+- **Objective:** Generate the Prisma client, create the shared server-side client (`lib/prisma.js`) using the pg adapter and the pooled `DATABASE_URL`, and confirm with a temporary `SELECT 1` that the app's database configuration can talk to Neon. No models, tables, migrations, API routes or frontend components.
+
+### Exact prompts
+1. ```
+   I approve Milestone 2, Step 2.4: Verifying the connection between Prisma and Neon PostgreSQL.
+   Objective
+   Confirm that our Next.js application's server-side database configuration can successfully communicate with Neon PostgreSQL.
+   Scope of work
+   1. Run npx prisma generate using our existing Prisma 7 configuration.
+   2. Create lib/prisma.js using the installed @prisma/adapter-pg driver.
+   3. Configure the Prisma Client to use DATABASE_URL, which contains our pooled Neon connection string.
+   4. Ensure the Prisma Client is reusable across server-side requests and avoids unnecessary connection instances during Next.js development.
+   5. Run a temporary database connection test using Prisma Client and a read-only SQL query: SELECT 1.
+   Verification requirements
+   - Confirm Prisma Client generates successfully.
+   - Confirm the application can connect to Neon.
+   - Confirm the query returns 1.
+   - Confirm no database models or tables were created.
+   - Confirm no migrations were executed.
+   - Confirm the generated Prisma Client is excluded from Git.
+   - Confirm the database credentials are not exposed in source files, terminal output, or documentation.
+   - Run npm run build to verify the existing Next.js application still builds.
+   If prisma generate fails because the schema contains no models, stop and explain the issue rather than adding models without my approval.
+   If the connection fails, explain the exact error and propose the smallest possible correction. Do not change the architecture without my approval.
+   Documentation
+   Update PROMPT_LOG.md with:
+   - Milestone 2, Step 2.4
+   - My exact prompt
+   - Files created or modified
+   - Commands executed
+   - Verification results
+   - Errors or corrections
+   - An explanation of what SELECT 1 demonstrated
+   Git requirements
+   After the tests pass:
+   1. Review the changes.
+   2. Show me the files that would be committed.
+   3. Propose a commit message.
+   4. Wait for my approval before committing or pushing.
+   Important constraints
+   Do not create the Opportunity model yet.
+   Do not create database tables or run migrations.
+   Do not implement API routes or frontend components.
+   Do not modify the original OpenRaiz repository.
+   Complete Step 2.4 and stop.
+   ```
+   (Before this prompt, the user had been asked "Do you want me to begin Step 2.4?" after the agent described it.)
+2. ```
+   Yes, commit and push it
+   ```
+   → Approval of the agent's summary and proposed commit message `Add shared Prisma client and verify Neon connection`. The user did not separately report running any test in this step.
+
+### Commands executed
+- `npx prisma generate` (output filtered so any URL would be hidden)
+- Temporary test scripts kept **outside the project** in the agent's scratchpad (not committed): a small resolver so plain Node understands the `@/` import shortcut Next.js uses, a `SELECT 1` script, and a read-only table-listing script. Run with `node --env-file=.env --import <resolver> <script>`, with output filtered to hide URLs. The test imports the real `lib/prisma.js`.
+- `ls prisma`, `git check-ignore -v generated/prisma/client.ts`, `git status --short`
+- A credential scan (prints only yes/no) over `lib/prisma.js`, `prisma/schema.prisma`, `prisma.config.ts`, `PROMPT_LOG.md` and `.env.example`
+- `npm run lint`, `npm run build`
+- `git status --short` in the original `openraiz` repo (read-only check)
+
+### Files created or modified
+- **Created:** `lib/prisma.js`.
+- **Generated, ignored by Git (not committed):** `generated/prisma/` (the Prisma client).
+- **Modified:** `eslint.config.mjs` (added `generated/**` to the ignore list), `PROMPT_LOG.md` (this entry).
+This step affects the **backend** only (server-side database access). No frontend, API routes or database tables.
+
+### What the code does
+- **`lib/prisma.js`:** creates one Prisma Client that talks to Neon through the `pg` adapter, using the pooled `DATABASE_URL`. It throws a clear error if the variable is missing. It is stored on `globalThis` in development so Next.js code reloads reuse the same client instead of opening a new set of database connections each time. It is for server code only: Route Handlers and Server Components, never client components, so the connection string never reaches the browser.
+- **`SELECT 1`:** a query that asks the database to return the number 1 and touches no tables. It is read-only.
+
+### Verification results
+- `npx prisma generate` succeeded ("Generated Prisma Client (7.10.0) to ./generated/prisma") even though the schema has no models, so the "stop and explain" case did not occur.
+- **Connection and query:** the test through the real `lib/prisma.js` returned `[{"result":1}]` in about 1.5 seconds. No timeout or `P1001` error occurred, so the Neon wake-up delay did not appear this time.
+- **What `SELECT 1` demonstrated:** the generated client, the pg adapter, the pooled `DATABASE_URL`, the network path, TLS and the Neon credentials all work together end to end, and Neon accepted the connection and answered. It does **not** show that any tables or data exist, because none do yet.
+- **No tables or migrations:** a read-only query of `information_schema.tables` found 0 user tables, and `prisma/migrations/` does not exist (`prisma/` contains only `schema.prisma`). No models exist and no migration command was run.
+- **Git:** `generated/prisma/client.ts` is ignored (`.gitignore:39 /generated/prisma`). `git status` shows only `eslint.config.mjs` modified and `lib/` new.
+- **Credentials:** the scan found no part of the real password, user name or host in the source files, the log or `.env.example`. Terminal output was filtered, and none of it contained a URL or password.
+- `npm run lint` passes after the correction below, and `npm run build` compiles successfully.
+- The original `openraiz` repo has 0 changed files.
+- **Not yet confirmed by the user:** the user has not yet reviewed these results.
+
+### Limitation of this test
+The test ran in plain Node using a small resolver, not inside Next.js. Next's build does not compile `lib/prisma.js` yet, because nothing imports it, so the build passing does not prove it. Whether Next.js's bundler handles importing the generated TypeScript client from this JavaScript project will first be tested for real when the first API route uses `lib/prisma.js` (Milestone 3, GET endpoint). This follows the open question noted in Step 2.3.
+
+### Warnings seen in the test output (not errors)
+- **pg SSL-mode notice:** the `pg` driver says the `sslmode=require` in the connection string is currently treated like `verify-full` (the secure behavior) and that a future major version will change this. Nothing to do now. If it becomes a problem later, the connection string can say `sslmode=verify-full` explicitly.
+- **`MODULE_TYPELESS_PACKAGE_JSON`:** plain Node noticed `lib/prisma.js` uses `import` syntax in a package without `"type": "module"`. This comes from running the file in plain Node for the test; Next.js is not affected. No change was made to `package.json`.
+- **Prisma update notice** suggesting 8.0.0-rc.23 was ignored, per the decision to stay on 7.10.0.
+
+### Errors or mistakes identified
+- After `prisma generate`, `npm run lint` reported 8 warnings (all "unused eslint-disable directive") in the generated client files. Linting was clean before this step, because that folder did not exist yet.
+
+### Corrections made
+- Added `generated/**` to the ignore list in `eslint.config.mjs`, so generated code is not linted. Lint then passed with no warnings. This is a small change beyond the files named in the prompt, made only to fix the warnings above.
+
+### Git
+- **Commit message:** PENDING — nothing committed; awaiting the user's approval.
+- **Commit reference:** PENDING.
